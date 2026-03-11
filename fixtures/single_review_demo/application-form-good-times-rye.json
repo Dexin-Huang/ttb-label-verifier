@@ -1,0 +1,14 @@
+{
+  "application_reference": "TTB-23187001000130",
+  "beverage_type": "distilled_spirits",
+  "brand_name": "GOOD TIMES",
+  "class_type": "STRAIGHT RYE WHISKEY",
+  "alcohol_content": "57.5% ALC./VOL. 115 PROOF",
+  "net_contents": "750ML",
+  "bottler_name_address": "BOTTLED BY WHISKEY THIEF DISTILLING CO. FRANKFORT, KENTUCKY, USA",
+  "country_of_origin": "",
+  "requires_government_warning": true,
+  "label_image_filename": "label-image-good-times-rye.png",
+  "source": "Reviewed subset demo pair",
+  "notes": "This is a clean single-review demo form derived from the reviewed subset metadata."
+}
