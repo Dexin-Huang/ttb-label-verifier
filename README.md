@@ -64,6 +64,7 @@ Create `.env.local` and set:
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-3.1-flash-lite-preview
 ```
 
 Optional:
@@ -71,6 +72,8 @@ Optional:
 ```bash
 NEXT_PUBLIC_BATCH_CONCURRENCY=6
 ```
+
+For Vercel, you can import the same values from `vercel.env.example`.
 
 Then run:
 

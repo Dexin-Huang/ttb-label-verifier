@@ -8,6 +8,7 @@ import type {
 } from '@/lib/types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-lite-preview';
 
 type ExtractionConfidence = 'high' | 'medium' | 'low';
 
@@ -336,7 +337,7 @@ export async function extractLabelFields(
   const base64Image = imageBuffer.toString('base64');
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3.1-flash-lite-preview',
+    model: GEMINI_MODEL,
     contents: [
       {
         role: 'user',
@@ -385,7 +386,7 @@ export async function adjudicateFlaggedFields(
   const base64Image = imageBuffer.toString('base64');
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3.1-flash-lite-preview',
+    model: GEMINI_MODEL,
     contents: [
       {
         role: 'user',
