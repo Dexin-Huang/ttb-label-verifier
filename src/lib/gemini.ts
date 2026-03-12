@@ -6,7 +6,6 @@ import type {
   GovernmentWarningExtraction,
   ReasonCode,
 } from '@/lib/types';
-import { getMockResponse } from './gemini-mock';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
 
@@ -333,11 +332,6 @@ export async function extractLabelFields(
   imageBuffer: Buffer,
   mimeType: string,
 ): Promise<GeminiExtractionResult> {
-  // Mock mode for testing — returns deterministic responses without calling Gemini
-  if (process.env.GEMINI_MOCK === 'true') {
-    const mockResponse = getMockResponse(imageBuffer);
-    if (mockResponse) return mockResponse;
-  }
 
   const base64Image = imageBuffer.toString('base64');
 
@@ -387,9 +381,6 @@ export async function adjudicateFlaggedFields(
     return {};
   }
 
-  if (process.env.GEMINI_MOCK === 'true') {
-    return {};
-  }
 
   const base64Image = imageBuffer.toString('base64');
 

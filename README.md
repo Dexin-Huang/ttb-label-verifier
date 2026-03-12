@@ -60,7 +60,7 @@ cd C:\Users\dexin\Projects\treasury
 npm install
 ```
 
-The working copy already includes `.env.local`. If you need to recreate it, start from `.env.example` and set:
+Create `.env.local` from `.env.example` and set:
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key
@@ -133,3 +133,4 @@ Current checks run clean in this migrated root:
 - Session history is intentional for the prototype; there is no permanent archive.
 - Batch review is repeated single-review execution with bounded parallelism.
 - The current batch flow runs with concurrency `6` by default.
+
