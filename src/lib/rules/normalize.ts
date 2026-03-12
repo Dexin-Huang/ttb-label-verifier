@@ -26,10 +26,12 @@ export function parseAlcoholContent(
   text: string,
 ): { abv: number | null; proof: number | null } {
   const abvMatch = text.match(/(\d+\.?\d*)\s*%/);
-  const proofMatch = text.match(/(\d+)\s*proof/i);
+  const proofAfterMatch = text.match(/(\d+)\s*proof/i);
+  const proofBeforeMatch = text.match(/proof\s*(\d+)/i);
+  const proofValue = proofAfterMatch?.[1] ?? proofBeforeMatch?.[1] ?? null;
   return {
     abv: abvMatch ? parseFloat(abvMatch[1]) : null,
-    proof: proofMatch ? parseInt(proofMatch[1]) : null,
+    proof: proofValue ? parseInt(proofValue) : null,
   };
 }
 

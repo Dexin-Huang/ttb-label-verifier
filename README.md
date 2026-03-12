@@ -168,4 +168,4 @@ Current checks run clean in this migrated root:
 - Deterministic rules produce the triage result.
 - Session history is intentional for the prototype; there is no permanent archive.
 - Batch review is repeated single-review execution with bounded parallelism.
-- The current batch flow runs with concurrency `4`.
+- The current batch flow runs with concurrency `6` by default.

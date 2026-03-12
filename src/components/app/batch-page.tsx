@@ -23,7 +23,14 @@ import { InlineError, IntakeStepCard, IntakeUploadCard } from './intake';
 
 type BatchStage = 'upload' | 'processing' | 'result';
 
-const BATCH_CONCURRENCY = 4;
+const DEFAULT_BATCH_CONCURRENCY = Number.parseInt(
+  process.env.NEXT_PUBLIC_BATCH_CONCURRENCY ?? '6',
+  10,
+);
+const BATCH_CONCURRENCY =
+  Number.isFinite(DEFAULT_BATCH_CONCURRENCY) && DEFAULT_BATCH_CONCURRENCY > 0
+    ? DEFAULT_BATCH_CONCURRENCY
+    : 6;
 const BATCH_LABEL_ACCEPT = 'image/png,image/jpeg,image/jpg,application/pdf';
 
 const MANIFEST_HELP_ITEMS = [

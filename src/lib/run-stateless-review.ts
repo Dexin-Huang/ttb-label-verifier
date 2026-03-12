@@ -1,8 +1,9 @@
-import { extractLabelFields } from '@/lib/gemini';
+import { adjudicateFlaggedFields, extractLabelFields } from '@/lib/gemini';
 import { runRuleEngine } from '@/lib/rules/engine';
 import type {
   Application,
   CreateApplicationRequest,
+  GeminiExtractionResult,
   ReviewStatus,
   StatelessReviewResult,
 } from '@/lib/types';
@@ -36,6 +37,24 @@ interface RunStatelessReviewInput {
   batchId?: string | null;
 }
 
+function runRules(
+  application: Application,
+  extraction: GeminiExtractionResult,
+) {
+  return runRuleEngine({
+    application,
+    extraction,
+    context: {
+      beverage_type: application.beverage_type,
+      requires_government_warning: application.requires_government_warning,
+    },
+  });
+}
+
+function hasExtractionPatch(patch: Partial<GeminiExtractionResult>): boolean {
+  return Object.values(patch).some((value) => value !== undefined);
+}
+
 export async function runStatelessReview(
   input: RunStatelessReviewInput,
 ): Promise<StatelessReviewResult> {
@@ -44,25 +63,40 @@ export async function runStatelessReview(
   const createdAt = new Date().toISOString();
 
   try {
-    const extraction = await extractLabelFields(input.fileBuffer, input.mimeType);
-    const ruleResult = runRuleEngine({
-      application: runtimeApplication,
-      extraction,
-      context: {
-        beverage_type: runtimeApplication.beverage_type,
-        requires_government_warning: runtimeApplication.requires_government_warning,
-      },
-    });
+    const initialExtraction = await extractLabelFields(input.fileBuffer, input.mimeType);
+    const initialRuleResult = runRules(runtimeApplication, initialExtraction);
+
+    let finalExtraction = initialExtraction;
+    let finalRuleResult = initialRuleResult;
+
+    try {
+      const adjudicationPatch = await adjudicateFlaggedFields(
+        input.fileBuffer,
+        input.mimeType,
+        initialRuleResult.field_results,
+      );
+
+      if (hasExtractionPatch(adjudicationPatch)) {
+        finalExtraction = {
+          ...initialExtraction,
+          ...adjudicationPatch,
+        };
+        finalRuleResult = runRules(runtimeApplication, finalExtraction);
+      }
+    } catch {
+      finalExtraction = initialExtraction;
+      finalRuleResult = initialRuleResult;
+    }
 
     return {
       id: `review_${crypto.randomUUID()}`,
       created_at: createdAt,
       source: input.source ?? 'single',
       batch_id: input.batchId ?? null,
-      status: ruleResult.overall_status,
-      summary: ruleResult.summary,
-      field_results: ruleResult.field_results,
-      extraction_raw: extraction,
+      status: finalRuleResult.overall_status,
+      summary: finalRuleResult.summary,
+      field_results: finalRuleResult.field_results,
+      extraction_raw: finalExtraction,
       latency_ms: Date.now() - startTime,
       error_message: null,
       application: input.application,
