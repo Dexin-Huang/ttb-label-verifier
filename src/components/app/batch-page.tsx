@@ -485,7 +485,7 @@ function BatchProcessingStage({ progress }: { progress: BatchProgressState }) {
         />
       </div>
 
-      <div className="app-panel p-20 text-center md:p-28">
+      <div className="app-panel p-[var(--batch-processing-padding)] text-center">
         <div className="relative z-10 mx-auto max-w-sm space-y-8">
           <div className="relative h-px overflow-hidden bg-[#E3DBCF]">
             <div

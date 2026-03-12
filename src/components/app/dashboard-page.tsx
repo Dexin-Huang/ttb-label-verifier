@@ -20,8 +20,10 @@ function SingleReviewCard({ compact }: { compact: boolean }) {
   return (
     <Link
       href="/reviews/new"
-      className={`group flex flex-col justify-center bg-surface text-left transition-colors hover:bg-hover ${
-        compact ? 'h-48 p-12' : 'h-[450px] p-20'
+      className={`group flex h-full flex-col justify-center bg-surface text-left transition-colors hover:bg-hover ${
+        compact
+          ? 'h-48 p-12'
+          : 'min-h-[var(--dashboard-card-height)] px-[var(--dashboard-card-padding)] py-[calc(var(--dashboard-card-padding)*0.9)]'
       }`}
     >
       <div className="space-y-4">
@@ -31,13 +33,13 @@ function SingleReviewCard({ compact }: { compact: boolean }) {
         </div>
         <h2
           className={`display-serif leading-[1.04] tracking-[0.015em] ${
-            compact ? 'text-[3.1rem]' : 'text-[5.2rem]'
+            compact ? 'text-[3.1rem]' : 'text-[clamp(4.2rem,6vw,5.35rem)]'
           }`}
         >
           Single Review
         </h2>
         {!compact ? (
-          <p className="max-w-md pt-4 text-[15px] italic leading-7 text-subtle">
+          <p className="max-w-md pt-4 text-[clamp(0.95rem,1vw,1.02rem)] italic leading-7 text-subtle">
             Compare one application form to one label image.
           </p>
         ) : null}
@@ -54,21 +56,23 @@ function BatchReviewCard({ compact }: { compact: boolean }) {
   return (
     <Link
       href="/batches/new"
-      className={`group flex flex-col justify-center bg-surface text-left transition-colors hover:bg-hover ${
-        compact ? 'h-48 p-12' : 'h-[450px] p-20'
+      className={`group flex h-full flex-col justify-center bg-surface text-left transition-colors hover:bg-hover ${
+        compact
+          ? 'h-48 p-12'
+          : 'min-h-[var(--dashboard-card-height)] px-[var(--dashboard-card-padding)] py-[calc(var(--dashboard-card-padding)*0.9)]'
       }`}
     >
       <div className="space-y-4">
         <SectionEyebrow>Multiple Applications</SectionEyebrow>
         <h2
-          className={`display-serif max-w-[18.5rem] leading-[1.08] tracking-[0.012em] ${
-            compact ? 'text-[2.6rem]' : 'text-[3.75rem]'
+          className={`display-serif max-w-[19rem] leading-[1.08] tracking-[0.012em] ${
+            compact ? 'text-[2.6rem]' : 'text-[clamp(3.2rem,4.6vw,4rem)]'
           }`}
         >
           Batch Review
         </h2>
         {!compact ? (
-          <p className="max-w-[13rem] pt-2 text-[13px] italic leading-6 text-subtle">
+          <p className="max-w-[14rem] pt-2 text-[clamp(0.84rem,0.92vw,0.92rem)] italic leading-6 text-subtle">
             Upload a CSV manifest and matching label images.
           </p>
         ) : null}

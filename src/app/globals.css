@@ -23,6 +23,9 @@
   --page-gutter: clamp(1.5rem, 4vw, 3rem);
   --page-top: clamp(2rem, 4vw, 3rem);
   --section-gap: clamp(3rem, 6vw, 4.5rem);
+  --dashboard-card-height: clamp(23rem, 35vw, 28rem);
+  --dashboard-card-padding: clamp(2.75rem, 5.5vw, 5rem);
+  --batch-processing-padding: clamp(3.25rem, 7vw, 7rem);
   --shadow-card: 0 14px 30px -24px rgba(26, 26, 26, 0.18);
   --shadow-paper: 0 28px 56px -38px rgba(26, 26, 26, 0.26);
   --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
@@ -33,19 +36,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    font-size: 16px;
-  }
-
-  @media (min-width: 64rem) {
-    html {
-      font-size: 17px;
-    }
-  }
-
-  @media (min-width: 90rem) {
-    html {
-      font-size: 18px;
-    }
+    font-size: clamp(16px, 0.18vw + 14.8px, 18px);
   }
 
   body {
