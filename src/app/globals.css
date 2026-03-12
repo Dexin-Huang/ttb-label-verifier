@@ -23,7 +23,7 @@
   --page-gutter: clamp(1.875rem, 5.25vw, 4.375rem);
   --page-top: clamp(2.625rem, 5.25vw, 4.1875rem);
   --section-gap: clamp(3.75rem, 7.5vw, 6.25rem);
-  --dashboard-card-height: clamp(15rem, 21vw, 17rem);
+  --dashboard-card-height: clamp(21rem, 29vw, 24rem);
   --dashboard-card-padding: clamp(1.6rem, 3vw, 2.6rem);
   --batch-processing-padding: clamp(4.75rem, 10vw, 10rem);
   --shadow-card: 0 14px 30px -24px rgba(26, 26, 26, 0.18);
