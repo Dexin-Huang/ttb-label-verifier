@@ -50,14 +50,14 @@ export function PageHeading({
         {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
         <h1
           className={cn(
-            'display-serif text-4xl leading-[1.08] tracking-[0.01em] md:text-[2.7rem]',
+            'display-serif text-5xl leading-[1.08] tracking-[0.01em] md:text-[3.4rem]',
             titleClassName
           )}
         >
           {title}
         </h1>
         {subtitle ? (
-          <p className="max-w-md text-sm leading-relaxed text-subtle">{subtitle}</p>
+          <p className="max-w-lg text-base leading-relaxed text-subtle">{subtitle}</p>
         ) : null}
       </div>
       {actions ? <div className="flex items-center gap-4">{actions}</div> : null}
@@ -91,8 +91,8 @@ export function PlaceholderCard({
 }) {
   return (
     <div className="app-panel px-8 py-14 text-center md:px-12 md:py-16">
-      <h1 className="font-serif text-3xl text-fg md:text-4xl">{title}</h1>
-      <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-subtle">
+      <h1 className="font-serif text-4xl text-fg md:text-5xl">{title}</h1>
+      <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-subtle">
         {description}
       </p>
       <Link href="/" className="app-solid-button mt-8">

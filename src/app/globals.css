@@ -19,13 +19,13 @@
 }
 
 :root {
-  --page-width: 80rem;
-  --page-gutter: clamp(1.5rem, 4vw, 3rem);
-  --page-top: clamp(2rem, 4vw, 3rem);
-  --section-gap: clamp(3rem, 6vw, 4.5rem);
-  --dashboard-card-height: clamp(23rem, 35vw, 28rem);
-  --dashboard-card-padding: clamp(2.75rem, 5.5vw, 5rem);
-  --batch-processing-padding: clamp(3.25rem, 7vw, 7rem);
+  --page-width: 115rem;
+  --page-gutter: clamp(1.875rem, 5.25vw, 4.375rem);
+  --page-top: clamp(2.625rem, 5.25vw, 4.1875rem);
+  --section-gap: clamp(3.75rem, 7.5vw, 6.25rem);
+  --dashboard-card-height: clamp(15rem, 21vw, 17rem);
+  --dashboard-card-padding: clamp(1.6rem, 3vw, 2.6rem);
+  --batch-processing-padding: clamp(4.75rem, 10vw, 10rem);
   --shadow-card: 0 14px 30px -24px rgba(26, 26, 26, 0.18);
   --shadow-paper: 0 28px 56px -38px rgba(26, 26, 26, 0.26);
   --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
@@ -36,7 +36,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    font-size: clamp(16px, 0.18vw + 14.8px, 18px);
+    font-size: clamp(20px, 0.38vw + 18px, 24px);
   }
 
   body {
@@ -92,11 +92,11 @@
   }
 
   .app-eyebrow {
-    @apply text-[10px] font-bold uppercase tracking-[0.24em] text-muted;
+    @apply text-[12px] font-bold uppercase tracking-[0.24em] text-muted;
   }
 
   .app-back-link {
-    @apply inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.24em] text-muted transition-colors hover:text-fg;
+    @apply inline-flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.24em] text-muted transition-colors hover:text-fg;
   }
 
   .app-panel {
@@ -113,33 +113,33 @@
   }
 
   .app-outline-button {
-    @apply inline-flex items-center justify-center border border-fg px-8 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-fg transition-colors hover:bg-fg hover:text-surface;
+    @apply inline-flex items-center justify-center border border-fg px-10 py-4 text-[12px] font-bold uppercase tracking-[0.22em] text-fg transition-colors hover:bg-fg hover:text-surface;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-emphasis);
   }
 
   .app-solid-button {
-    @apply inline-flex items-center justify-center bg-fg px-8 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-surface transition-colors hover:bg-[#333333];
+    @apply inline-flex items-center justify-center bg-fg px-10 py-4 text-[12px] font-bold uppercase tracking-[0.22em] text-surface transition-colors hover:bg-[#333333];
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-emphasis);
   }
 
   .app-danger-button {
-    @apply inline-flex items-center justify-center border border-fail px-8 py-3 text-[10px] font-bold uppercase tracking-[0.22em] text-fail transition-colors hover:bg-fail hover:text-surface;
+    @apply inline-flex items-center justify-center border border-fail px-10 py-4 text-[12px] font-bold uppercase tracking-[0.22em] text-fail transition-colors hover:bg-fail hover:text-surface;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-emphasis);
   }
 
   .app-link-underline {
-    @apply inline-flex w-fit items-center gap-2 border-b border-fg pb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-fg;
+    @apply inline-flex w-fit items-center gap-2.5 border-b border-fg pb-1 text-[12px] font-bold uppercase tracking-[0.18em] text-fg;
   }
 
   .app-data-label {
-    @apply text-[9px] font-bold uppercase tracking-[0.12em] text-muted;
+    @apply text-[11px] font-bold uppercase tracking-[0.12em] text-muted;
   }
 
   .app-nav-label {
-    @apply text-[10px] font-bold uppercase tracking-[0.16em];
+    @apply text-[12px] font-bold uppercase tracking-[0.16em];
   }
 
   .display-serif {
@@ -151,10 +151,10 @@
   }
 
   .label-uppercase {
-    @apply text-[10px] font-bold uppercase tracking-[0.25em] text-muted;
+    @apply text-[12px] font-bold uppercase tracking-[0.25em] text-muted;
   }
 
   .label-uppercase-sm {
-    @apply text-[9px] font-bold uppercase tracking-widest text-muted;
+    @apply text-[11px] font-bold uppercase tracking-widest text-muted;
   }
 }

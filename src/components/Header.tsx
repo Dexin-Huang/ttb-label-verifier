@@ -28,18 +28,18 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/30 bg-[rgba(253,251,247,0.97)] shadow-[0_10px_20px_-24px_rgba(48,38,24,0.38)] backdrop-blur-lg">
-      <div className="flex w-full items-center justify-between px-4 py-3 md:px-6 md:py-4">
+      <div className="flex w-full items-center justify-between px-5 py-4 md:px-8 md:py-5">
         <Link
           href="/"
-          className="flex items-center gap-2 transition-opacity hover:opacity-80"
+          className="flex items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <BrushLogo size={32} />
-          <span className="display-serif text-lg italic leading-none tracking-tight md:text-xl">
+          <BrushLogo size={40} />
+          <span className="display-serif text-[1.45rem] italic leading-none tracking-tight md:text-[1.8rem]">
             TTB Label Verifier
           </span>
         </Link>
 
-        <nav className="flex items-center gap-4 md:gap-7">
+        <nav className="flex items-center gap-5 md:gap-8">
           {NAV_ITEMS.map((item) => {
             const active = item.matches(pathname);
 

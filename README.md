@@ -143,13 +143,14 @@ So the persistence layer covers review history, batch detail pages, and uploaded
 The assignment was unusually explicit about usability, especially for less technical reviewers. That drove these choices:
 
 - a very small top-level IA
+- generously spaced layouts and slightly oversized type on key screens, so the flow feels easy to follow and the next action is obvious
 - upload states that say exactly what is missing and what is ready
 - spreadsheet-style review history instead of analytics cards
 - issue-first detail views that foreground flagged fields
 - warm, restrained surfaces with stronger contrast where people need to scan quickly
 - serif display typography for calm hierarchy, paired with sans-serif body copy for legibility
 
-I kept the workflow close to how a reviewer already thinks: application, label, checklist, issues.
+I kept the workflow close to how a reviewer already thinks: application, label, checklist, issues. The extra breathing room is intentional. In a review workflow like this, a slightly oversized interface lowers cognitive load, reduces visual crowding, and makes the product easier to use quickly without feeling dense or technical.
 
 ## Key Tradeoffs
 

@@ -33,19 +33,19 @@ function SingleReviewCard({ compact }: { compact: boolean }) {
         </div>
         <h2
           className={`display-serif leading-[1.04] tracking-[0.015em] ${
-            compact ? 'text-[3.1rem]' : 'text-[clamp(4.2rem,6vw,5.35rem)]'
+            compact ? 'text-[2.8rem]' : 'text-[clamp(2.55rem,3.4vw,3.6rem)]'
           }`}
         >
           Single Review
         </h2>
         {!compact ? (
-          <p className="max-w-md pt-4 text-[clamp(0.95rem,1vw,1.02rem)] italic leading-7 text-subtle">
+          <p className="max-w-[22rem] pt-2 text-[clamp(0.82rem,0.66vw,0.9rem)] italic leading-5 text-subtle">
             Compare one application form to one label image.
           </p>
         ) : null}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6">
         <span className="app-link-underline">Begin Single Review</span>
       </div>
     </Link>
@@ -66,19 +66,19 @@ function BatchReviewCard({ compact }: { compact: boolean }) {
         <SectionEyebrow>Multiple Applications</SectionEyebrow>
         <h2
           className={`display-serif max-w-[19rem] leading-[1.08] tracking-[0.012em] ${
-            compact ? 'text-[2.6rem]' : 'text-[clamp(3.2rem,4.6vw,4rem)]'
+            compact ? 'text-[2.35rem]' : 'text-[clamp(2rem,2.7vw,2.8rem)]'
           }`}
         >
           Batch Review
         </h2>
         {!compact ? (
-          <p className="max-w-[14rem] pt-2 text-[clamp(0.84rem,0.92vw,0.92rem)] italic leading-6 text-subtle">
+          <p className="max-w-[12rem] pt-2 text-[clamp(0.78rem,0.58vw,0.85rem)] italic leading-5 text-subtle">
             Upload a CSV manifest and matching label images.
           </p>
         ) : null}
       </div>
 
-      <div className="mt-8">
+      <div className="mt-6">
         <span className="app-link-underline">Begin Batch Review</span>
       </div>
     </Link>
@@ -100,15 +100,15 @@ function QueueFilterButton({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-3 border px-4 py-2 text-left transition-colors ${
+      className={`inline-flex items-center gap-4 border px-5 py-3 text-left transition-colors ${
         active
           ? 'border-fg bg-fg text-surface'
           : 'border-border bg-surface text-fg hover:bg-hover'
       }`}
     >
-      <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{label}</span>
+      <span className="text-[12px] font-bold uppercase tracking-[0.18em]">{label}</span>
       <span
-        className={`text-[10px] font-bold uppercase tracking-[0.14em] ${
+        className={`text-[12px] font-bold uppercase tracking-[0.14em] ${
           active ? 'text-surface/80' : 'text-muted'
         }`}
       >
@@ -120,7 +120,7 @@ function QueueFilterButton({
 
 function IssueCount({ count }: { count: number }) {
   return (
-    <span className="display-serif text-[1.55rem] leading-none tracking-[0.01em] text-fg">
+    <span className="display-serif text-[1.95rem] leading-none tracking-[0.01em] text-fg">
       {count}
     </span>
   );
@@ -389,10 +389,10 @@ function ReviewHistory({
           <div className="space-y-3">
             <SectionEyebrow>Dashboard</SectionEyebrow>
             <div className="space-y-1">
-              <h2 className="display-serif text-[2.15rem] leading-[1.08] tracking-[0.01em]">
+              <h2 className="display-serif text-[2.7rem] leading-[1.08] tracking-[0.01em]">
                 Review History
               </h2>
-              <p className="max-w-2xl text-sm leading-6 text-subtle">
+              <p className="max-w-3xl text-base leading-7 text-subtle">
                 Scan completed reviews by issue count, then open the record for the
                 field-by-field checklist.
               </p>
