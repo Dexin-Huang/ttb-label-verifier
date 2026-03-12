@@ -4,11 +4,15 @@ import Image from 'next/image';
 import type {
   FieldResult,
   FieldStatus,
-  FieldType,
-  ReasonCode,
   SessionReviewRecord,
   StatelessReviewResult,
 } from '@/lib/types';
+import {
+  FIELD_LABELS,
+  formatApplicationValue,
+  formatExtractedValue,
+  formatReasonLabel,
+} from '@/lib/review-display';
 import { cn } from '@/lib/utils';
 import { BackLink, PageHeading, PageShell, SectionEyebrow } from './chrome';
 import { StatusBadge } from './status';
@@ -19,67 +23,6 @@ import {
 } from '@/lib/review-session';
 
 type ReviewRecord = SessionReviewRecord | StatelessReviewResult;
-
-const FIELD_LABELS: Record<FieldType, string> = {
-  alcohol_content: 'Alcohol Content',
-  bottler_name_address: 'Bottler / Producer',
-  brand_name: 'Brand Name',
-  class_type: 'Class / Type',
-  country_of_origin: 'Country of Origin',
-  government_warning_heading: 'Warning Heading',
-  government_warning_presence: 'Warning Present',
-  government_warning_text: 'Warning Text',
-  net_contents: 'Net Contents',
-};
-
-const REASON_LABELS: Partial<Record<ReasonCode, string>> = {
-  EXTRACTION_LOW_CONFIDENCE: 'Low confidence',
-  FIELD_NOT_APPLICABLE: 'Not required',
-  MISSING_IN_APPLICATION: 'Missing in application',
-  MISSING_ON_LABEL: 'Missing on label',
-  NO_EXTRACTED_CANDIDATE: 'Not found on label',
-  NORMALIZED_MATCH: 'Matched after normalization',
-  PARSE_FAILED: 'Needs manual review',
-  PARTIAL_MATCH_REVIEW: 'Close match',
-  VALUE_MISMATCH: 'Value mismatch',
-  WARNING_BOLD_UNCERTAIN: 'Bold formatting uncertain',
-  WARNING_HEADING_NOT_ALL_CAPS: 'Heading not all caps',
-  WARNING_HEADING_NOT_BOLD: 'Heading not bold',
-  WARNING_MISSING: 'Warning missing',
-  WARNING_TEXT_MISMATCH: 'Warning text mismatch',
-};
-
-function formatRowApplicationValue(field: FieldResult): string {
-  if (field.status === 'skipped' && field.reason_code === 'FIELD_NOT_APPLICABLE') {
-    return 'Not applicable';
-  }
-
-  if (field.status === 'skipped' && field.reason_code === 'MISSING_IN_APPLICATION') {
-    return 'Not provided';
-  }
-
-  if (field.field_type === 'government_warning_presence') {
-    return field.application_value === 'required' ? 'Required' : 'Not Required';
-  }
-
-  return field.application_value?.trim() || 'Not provided';
-}
-
-function formatRowExtractedValue(field: FieldResult): string {
-  if (field.status === 'skipped' && field.reason_code === 'FIELD_NOT_APPLICABLE') {
-    return 'Not applicable';
-  }
-
-  if (field.field_type === 'government_warning_presence') {
-    return field.extracted_value === 'present' ? 'Present' : 'Not found';
-  }
-
-  if (field.status === 'skipped') {
-    return 'Not applicable';
-  }
-
-  return field.extracted_value?.trim() || 'Not found';
-}
 
 function fieldStatusMeta(status: FieldStatus): {
   badgeLabel: string;
@@ -129,7 +72,7 @@ function ReviewMetric({
 
 function ReviewChecklistRow({ field }: { field: FieldResult }) {
   const statusMeta = fieldStatusMeta(field.status);
-  const reasonLabel = REASON_LABELS[field.reason_code] ?? field.reason_code.replace(/_/g, ' ').toLowerCase();
+  const reasonLabel = formatReasonLabel(field.reason_code);
 
   return (
     <div className="grid grid-cols-1 gap-px border-t border-border bg-border first:border-t-0 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(8rem,0.7fr)]">
@@ -143,12 +86,12 @@ function ReviewChecklistRow({ field }: { field: FieldResult }) {
 
       <div className="bg-surface px-6 py-5">
         <p className="app-data-label md:hidden">Application Form</p>
-        <p className="font-serif text-sm leading-6 text-fg">{formatRowApplicationValue(field)}</p>
+        <p className="font-serif text-sm leading-6 text-fg">{formatApplicationValue(field)}</p>
       </div>
 
       <div className="bg-surface px-6 py-5">
         <p className="app-data-label md:hidden">Extracted From Label</p>
-        <p className="font-serif text-sm leading-6 text-fg">{formatRowExtractedValue(field)}</p>
+        <p className="font-serif text-sm leading-6 text-fg">{formatExtractedValue(field)}</p>
       </div>
 
       <div className="bg-surface px-6 py-5">

@@ -8,7 +8,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const formData = await request.formData();
     const applicationRaw = formData.get('application');
+    const batchIdRaw = formData.get('batch_id');
     const file = formData.get('file');
+    const sourceRaw = formData.get('source');
 
     if (typeof applicationRaw !== 'string') {
       return errorResponse('VALIDATION_ERROR', 'application is required', 400);
@@ -17,6 +19,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!(file instanceof File)) {
       return errorResponse('VALIDATION_ERROR', 'file is required', 400);
     }
+
+    const source =
+      sourceRaw === 'batch' || sourceRaw === 'single' ? sourceRaw : 'single';
+    const batchId =
+      typeof batchIdRaw === 'string' && batchIdRaw.trim().length > 0
+        ? batchIdRaw.trim()
+        : null;
 
     if (!RULE_CONFIG.ALLOWED_MIME_TYPES.includes(file.type)) {
       return errorResponse(
@@ -54,8 +63,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       mimeType: file.type,
       filename: file.name,
       fileSizeBytes: file.size,
-      source: 'single',
-      batchId: null,
+      source,
+      batchId,
     });
 
     return NextResponse.json(review, { status: 201 });

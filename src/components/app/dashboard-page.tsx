@@ -8,6 +8,7 @@ import {
   loadSessionReviews,
   toDashboardHistoryItems,
   type DashboardHistoryItem,
+  type DashboardIssueItem,
 } from '@/lib/review-session';
 import { PageShell, SectionEyebrow } from './chrome';
 import { PulseIndicator, StatusBadge } from './status';
@@ -121,6 +122,236 @@ function IssueCount({ count }: { count: number }) {
   );
 }
 
+function IssueSummaryList({ issues }: { issues: DashboardIssueItem[] }) {
+  const visibleIssues = issues.slice(0, 2);
+  const remainingCount = issues.length - visibleIssues.length;
+
+  return (
+    <div className="space-y-2.5">
+      {visibleIssues.map((issue) => (
+        <div key={`${issue.fieldType}-${issue.reasonLabel}`} className="space-y-1">
+          <StatusBadge
+            label={issue.fieldLabel}
+            tone={issue.tone}
+            labelClassName="tracking-[0.12em]"
+          />
+          <p className="pl-[14px] text-xs leading-5 text-subtle">{issue.reasonLabel}</p>
+        </div>
+      ))}
+      {remainingCount > 0 ? (
+        <p className="pl-[14px] text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
+          +{remainingCount} more {remainingCount === 1 ? 'issue' : 'issues'}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function IssueDetailsPanel({ href, issues }: { href: string; issues: DashboardIssueItem[] }) {
+  return (
+    <div className="border-t border-border bg-surface-muted px-4 py-4 md:px-6 md:py-5">
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <p className="app-data-label">Flagged Checks</p>
+          <p className="text-sm leading-6 text-subtle">
+            Review the flagged comparisons below, then open the full review for the
+            complete checklist.
+          </p>
+        </div>
+
+        <div className="app-grid-frame overflow-hidden">
+          <div className="hidden gap-px bg-border md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1.35fr)_minmax(0,0.9fr)]">
+            <div className="bg-surface px-5 py-4 text-[9px] font-bold uppercase tracking-[0.16em] text-muted">
+              Field
+            </div>
+            <div className="bg-surface px-5 py-4 text-[9px] font-bold uppercase tracking-[0.16em] text-muted">
+              Application Form
+            </div>
+            <div className="bg-surface px-5 py-4 text-[9px] font-bold uppercase tracking-[0.16em] text-muted">
+              Extracted From Label
+            </div>
+            <div className="bg-surface px-5 py-4 text-[9px] font-bold uppercase tracking-[0.16em] text-muted">
+              Why Flagged
+            </div>
+          </div>
+
+          {issues.map((issue) => (
+            <div
+              key={`${issue.fieldType}-${issue.reasonLabel}-detail`}
+              className="grid grid-cols-1 gap-px border-t border-border bg-border first:border-t-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1.35fr)_minmax(0,0.9fr)]"
+            >
+              <div className="space-y-1 bg-surface px-5 py-4">
+                <p className="app-data-label md:hidden">Field</p>
+                <p className="text-sm leading-6 text-fg">{issue.fieldLabel}</p>
+              </div>
+              <div className="space-y-1 bg-surface px-5 py-4">
+                <p className="app-data-label md:hidden">Application Form</p>
+                <p className="font-serif text-sm leading-6 text-fg">{issue.applicationValue}</p>
+              </div>
+              <div className="space-y-1 bg-surface px-5 py-4">
+                <p className="app-data-label md:hidden">Extracted From Label</p>
+                <p className="font-serif text-sm leading-6 text-fg">{issue.extractedValue}</p>
+              </div>
+              <div className="space-y-1 bg-surface px-5 py-4">
+                <p className="app-data-label md:hidden">Why Flagged</p>
+                <StatusBadge
+                  label={issue.reasonLabel}
+                  tone={issue.tone}
+                  emphasize
+                  labelClassName="tracking-[0.12em]"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end">
+          <Link href={href} className="app-outline-button">
+            Open Full Review
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DefaultHistoryRow({ item }: { item: DashboardHistoryItem }) {
+  return (
+    <Link
+      href={item.href}
+      className={`group grid grid-cols-1 gap-px border-t border-border bg-border first:border-t-0 md:items-stretch ${REVIEW_HISTORY_GRID_CLASS}`}
+    >
+      <div className="space-y-3 bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:space-y-2">
+        <div className="flex items-center gap-3">
+          <StatusBadge
+            label={item.source}
+            tone={item.tone}
+            labelClassName="tracking-[0.18em]"
+          />
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+            {item.reviewedAt}
+          </span>
+        </div>
+        <div className="space-y-1">
+          <p className="display-serif text-[1.45rem] leading-[1.08] tracking-[0.01em]">
+            {item.brand}
+          </p>
+          <p className="text-xs leading-5 text-subtle">{item.id}</p>
+        </div>
+      </div>
+
+      <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg">
+        <div className="space-y-1">
+          <p className="app-data-label md:hidden">Class / Type</p>
+          <p className="text-sm leading-6 text-fg">{item.type}</p>
+        </div>
+      </div>
+
+      <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:flex md:items-center md:justify-center">
+        <div className="space-y-1 md:text-center">
+          <p className="app-data-label md:hidden">Issues</p>
+          <IssueCount count={item.issueCount} />
+        </div>
+      </div>
+
+      <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:flex md:items-center md:justify-center">
+        <div className="space-y-1 md:text-center">
+          <p className="app-data-label md:hidden">Status</p>
+          <StatusBadge label={item.label} tone={item.tone} emphasize />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-6 bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:justify-center">
+        <div className="space-y-1 md:text-center">
+          <p className="app-data-label md:hidden">Open</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+            View Review
+          </p>
+        </div>
+        <ChevronRight
+          size={18}
+          className="text-border transition-colors group-hover:text-fg"
+        />
+      </div>
+    </Link>
+  );
+}
+
+function IssueHistoryRow({
+  expanded,
+  item,
+  onToggle,
+}: {
+  expanded: boolean;
+  item: DashboardHistoryItem;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="border-t border-border bg-border first:border-t-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`group grid w-full grid-cols-1 gap-px text-left md:items-stretch ${REVIEW_HISTORY_GRID_CLASS}`}
+      >
+        <div className="space-y-3 bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:space-y-2">
+          <div className="flex items-center gap-3">
+            <StatusBadge
+              label={item.source}
+              tone={item.tone}
+              labelClassName="tracking-[0.18em]"
+            />
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+              {item.reviewedAt}
+            </span>
+          </div>
+          <div className="space-y-1">
+            <p className="display-serif text-[1.45rem] leading-[1.08] tracking-[0.01em]">
+              {item.brand}
+            </p>
+            <p className="text-xs leading-5 text-subtle">{item.id}</p>
+          </div>
+        </div>
+
+        <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg">
+          <div className="space-y-2">
+            <p className="app-data-label md:hidden">Issue Summary</p>
+            <IssueSummaryList issues={item.issues} />
+          </div>
+        </div>
+
+        <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:flex md:items-center md:justify-center">
+          <div className="space-y-1 md:text-center">
+            <p className="app-data-label md:hidden">Issues</p>
+            <IssueCount count={item.issueCount} />
+          </div>
+        </div>
+
+        <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:flex md:items-center md:justify-center">
+          <div className="space-y-1 md:text-center">
+            <p className="app-data-label md:hidden">Status</p>
+            <StatusBadge label={item.label} tone={item.tone} emphasize />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-6 bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:justify-center">
+          <div className="space-y-1 md:text-center">
+            <p className="app-data-label md:hidden">Details</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+              {expanded ? 'Hide Issues' : 'Show Issues'}
+            </p>
+          </div>
+          <ChevronRight
+            size={18}
+            className={`text-border transition-all group-hover:text-fg ${expanded ? 'rotate-90 text-fg' : ''}`}
+          />
+        </div>
+      </button>
+
+      {expanded ? <IssueDetailsPanel href={item.href} issues={item.issues} /> : null}
+    </div>
+  );
+}
+
 function ReviewHistory({
   isClearing,
   items,
@@ -131,6 +362,7 @@ function ReviewHistory({
   onClearSession: () => void;
 }) {
   const [filter, setFilter] = useState<'all' | 'clear' | 'issues'>('all');
+  const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null);
 
   const visibleItems =
     filter === 'clear'
@@ -141,6 +373,10 @@ function ReviewHistory({
 
   const clearCount = items.filter((item) => item.issueCount === 0).length;
   const issuesCount = items.length - clearCount;
+  const activeExpandedIssueId =
+    filter === 'issues' && visibleItems.some((item) => item.id === expandedIssueId)
+      ? expandedIssueId
+      : null;
 
   return (
     <section className="space-y-8">
@@ -164,13 +400,19 @@ function ReviewHistory({
               active={filter === 'all'}
               count={items.length}
               label="All"
-              onClick={() => setFilter('all')}
+              onClick={() => {
+                setFilter('all');
+                setExpandedIssueId(null);
+              }}
             />
             <QueueFilterButton
               active={filter === 'clear'}
               count={clearCount}
               label="Pass"
-              onClick={() => setFilter('clear')}
+              onClick={() => {
+                setFilter('clear');
+                setExpandedIssueId(null);
+              }}
             />
             <QueueFilterButton
               active={filter === 'issues'}
@@ -202,7 +444,7 @@ function ReviewHistory({
             Application
           </div>
           <div className="bg-surface-muted px-6 py-4 text-[9px] font-bold uppercase tracking-[0.16em] text-muted">
-            Class / Type
+            {filter === 'issues' ? 'Issue Summary' : 'Class / Type'}
           </div>
           <div className="bg-surface-muted px-6 py-4 text-[9px] font-bold uppercase tracking-[0.16em] text-muted">
             Issues
@@ -211,70 +453,30 @@ function ReviewHistory({
             Status
           </div>
           <div className="bg-surface-muted px-6 py-4 text-[9px] font-bold uppercase tracking-[0.16em] text-muted">
-            Record
+            {filter === 'issues' ? 'Details' : 'Record'}
           </div>
         </div>
 
-        {visibleItems.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className={`group grid grid-cols-1 gap-px border-t border-border bg-border first:border-t-0 md:items-stretch ${REVIEW_HISTORY_GRID_CLASS}`}
-          >
-            <div className="space-y-3 bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:space-y-2">
-              <div className="flex items-center gap-3">
-                <StatusBadge
-                  label={item.source}
-                  tone={item.tone}
-                  labelClassName="tracking-[0.18em]"
-                />
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
-                  {item.reviewedAt}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <p className="display-serif text-[1.45rem] leading-[1.08] tracking-[0.01em]">
-                  {item.brand}
-                </p>
-                <p className="text-xs leading-5 text-subtle">{item.id}</p>
-              </div>
-            </div>
+        {visibleItems.length === 0 ? (
+          <div className="bg-surface px-6 py-10 text-sm leading-6 text-subtle">
+            No reviews match this filter yet.
+          </div>
+        ) : null}
 
-            <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg">
-              <div className="space-y-1">
-                <p className="app-data-label md:hidden">Class / Type</p>
-                <p className="text-sm leading-6 text-fg">{item.type}</p>
-              </div>
-            </div>
-
-            <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:flex md:items-center md:justify-center">
-              <div className="space-y-1 md:text-center">
-                <p className="app-data-label md:hidden">Issues</p>
-                <IssueCount count={item.issueCount} />
-              </div>
-            </div>
-
-            <div className="bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:flex md:items-center md:justify-center">
-              <div className="space-y-1 md:text-center">
-                <p className="app-data-label md:hidden">Status</p>
-                <StatusBadge label={item.label} tone={item.tone} emphasize />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-6 bg-surface px-6 py-5 transition-colors group-hover:bg-bg md:justify-center">
-              <div className="space-y-1 md:text-center">
-                <p className="app-data-label md:hidden">Open</p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
-                  View Review
-                </p>
-              </div>
-              <ChevronRight
-                size={18}
-                className="text-border transition-colors group-hover:text-fg"
-              />
-            </div>
-          </Link>
-        ))}
+        {visibleItems.map((item) =>
+          filter === 'issues' ? (
+            <IssueHistoryRow
+              key={item.id}
+              expanded={activeExpandedIssueId === item.id}
+              item={item}
+              onToggle={() =>
+                setExpandedIssueId((current) => (current === item.id ? null : item.id))
+              }
+            />
+          ) : (
+            <DefaultHistoryRow key={item.id} item={item} />
+          )
+        )}
       </div>
     </section>
   );

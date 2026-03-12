@@ -26,7 +26,7 @@ export function Header() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/50 bg-[#F9F8F6]/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border/30 bg-[rgba(253,251,247,0.97)] shadow-[0_10px_20px_-24px_rgba(48,38,24,0.38)] backdrop-blur-lg">
       <div className="flex w-full items-center justify-between px-4 py-3 md:px-6 md:py-4">
         <Link
           href="/"

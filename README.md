@@ -2,21 +2,26 @@
 
 AI-assisted alcohol label triage prototype for the TTB take-home.
 
+Supporting notes:
+
+- `EVALUATION.md` - internal rubric, current grade, and requirement gap analysis
+- `POLISH_NOTES.md` - active product/design polish priorities
+
 ## What It Is
 
 The product is intentionally narrow:
 
 - `Single Review`
 - `Batch Review`
-- `Session Dashboard`
+- `Dashboard`
 
 The tool does not make the final regulatory decision.
 
 It extracts label text with Gemini, compares it to application data with deterministic rules, and surfaces:
 
-- `pass_candidate`
-- `needs_review`
-- `likely_fail`
+- `Pass`
+- `Needs Review`
+- `Likely Fail`
 
 The point is to let a reviewer focus on the flagged slice of the work instead of rereading every clean item.
 
@@ -34,10 +39,12 @@ Single review uses:
 - `POST /api/review`
 
 Batch review uses the same endpoint repeatedly with bounded client-side concurrency.
+Each batch item is just a repeated single-review run against one manifest row and one label file.
 
 Session history is client-side only:
 
 - review metadata and results live in `sessionStorage`
+- batch metadata lives in `sessionStorage`
 - uploaded label blobs for preview live in `IndexedDB`
 
 There is no database and no Supabase dependency in the active runtime path.
@@ -119,30 +126,32 @@ npm run gemini:image
 ```txt
 src/
   app/
-    page.tsx                  session dashboard
-    reviews/new/page.tsx      single review flow
-    reviews/[id]/page.tsx     session-backed review detail
-    batches/new/page.tsx      batch upload
-    batches/[id]/page.tsx     session-backed batch detail
-    api/review/route.ts       stateless review endpoint
+    page.tsx                       dashboard
+    reviews/new/page.tsx           single review flow
+    reviews/[id]/page.tsx          session-backed review detail
+    batches/new/page.tsx           batch review flow
+    batches/[id]/page.tsx          session-backed batch detail
+    api/review/route.ts            stateless review endpoint
   components/
-    layout/                   providers + session store
-    review/                   review wizard, preview, result views
-    batch/                    batch upload/progress/table
-    dashboard/                session history list + filters
+    app/                           dashboard, review, batch, and detail views
+    layout/                        session provider placeholder
   lib/
-    gemini.ts                 Gemini extraction
-    run-stateless-review.ts   core review execution
-    review-session-files.ts   IndexedDB file storage
-    review-export.ts          client-side CSV export
-    csv.ts                    batch manifest parsing
-    rules/                    deterministic rule engine
+    gemini.ts                      Gemini extraction
+    run-stateless-review.ts        core review execution
+    application-upload.ts          single-review file parsing
+    batch-upload.ts                batch manifest parsing + filename matching
+    review-session.ts              session review persistence
+    review-batches.ts              session batch persistence
+    review-session-files.ts        IndexedDB file storage
+    review-export.ts               client-side CSV export
+    rules/                         deterministic rule engine
 fixtures/
-  demo_batch_20/             main evaluator-ready batch demo
-  sample_batch/              small manifest example
-  labels/synthetic/          small synthetic labels pack
+  demo_batch_20/                  main evaluator-ready batch demo
+  sample_batch/                   small manifest example
+  labels/synthetic/               small synthetic labels pack
 tests/
-  rules/                     unit tests for the deterministic engine
+  rules/                          deterministic engine tests
+  batch-upload.test.ts            batch manifest and file-matching tests
 ```
 
 ## Verification
@@ -159,4 +168,4 @@ Current checks run clean in this migrated root:
 - Deterministic rules produce the triage result.
 - Session history is intentional for the prototype; there is no permanent archive.
 - Batch review is repeated single-review execution with bounded parallelism.
-- Start with concurrency `5` for Gemini calls and adjust only if rate limits force it.
+- The current batch flow runs with concurrency `4`.

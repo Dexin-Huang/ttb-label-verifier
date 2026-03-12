@@ -3,15 +3,15 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-serif: var(--font-playfair-display);
-  --color-bg: #F9F8F6;
-  --color-bg-accent: #F3F2EE;
+  --color-bg: #F6F2EB;
+  --color-bg-accent: #FBF8F3;
   --color-fg: #1A1A1A;
   --color-muted: #6D6558;
   --color-subtle: #4F493F;
-  --color-border: #E2DED0;
+  --color-border: #DDD3C4;
   --color-surface: #FFFFFF;
-  --color-surface-muted: #FAF9F6;
-  --color-hover: #F3F2EE;
+  --color-surface-muted: #F8F4EE;
+  --color-hover: #F2ECE3;
   --color-pass: #21492E;
   --color-fail: #6D2626;
   --color-review: #755711;
@@ -37,12 +37,12 @@
 
   body {
     min-height: 100vh;
-    background: #F9F8F6;
+    background: #F6F2EB;
     @apply text-fg antialiased;
   }
 
   ::selection {
-    background: #E2DED0;
+    background: #DDD3C4;
   }
 
   button,

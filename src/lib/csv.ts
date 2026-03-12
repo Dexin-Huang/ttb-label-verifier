@@ -33,6 +33,15 @@ export function parseCsv(text: string): CsvRow[] {
   return rows;
 }
 
+export function parseCsvHeaders(text: string): string[] {
+  const lines = splitCsvLines(text);
+  if (lines.length === 0) {
+    return [];
+  }
+
+  return parseCsvLine(lines[0]).map((header) => header.trim().toLowerCase());
+}
+
 /**
  * Split CSV text into lines, respecting quoted fields that may contain newlines.
  */

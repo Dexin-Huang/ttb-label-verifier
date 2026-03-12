@@ -1,201 +1,356 @@
 'use client';
 
+import { useMemo, useRef, useState } from 'react';
+import { FileSpreadsheet, Images, Upload } from 'lucide-react';
 import {
-  useEffect,
-  useRef,
-  useState,
-  type DragEvent,
-  type ReactNode,
-} from 'react';
-import Link from 'next/link';
-import { Check, ChevronRight, FileSpreadsheet, Images, Upload } from 'lucide-react';
-import { cn } from '@/lib/utils';
+  matchBatchFiles,
+  parseBatchManifest,
+  validateBatchLabelFiles,
+  type BatchManifestItem,
+} from '@/lib/batch-upload';
+import { saveSessionBatch } from '@/lib/review-batches';
+import { submitReviewRequest } from '@/lib/review-request';
+import { persistSessionReview } from '@/lib/review-session';
+import type {
+  SessionBatchItem,
+  SessionBatchRecord,
+  SessionReviewRecord,
+  StatelessReviewResult,
+} from '@/lib/types';
+import { BatchResultView } from './batch-result-view';
 import { BackLink, PageHeading, PageShell, SectionEyebrow } from './chrome';
-import { BATCH_RESULTS, type BatchResultItem } from './mock-data';
-import { STATUS_TONE_STYLES, StatusBadge } from './status';
+import { InlineError, IntakeStepCard, IntakeUploadCard } from './intake';
 
 type BatchStage = 'upload' | 'processing' | 'result';
+
+const BATCH_CONCURRENCY = 4;
 const BATCH_LABEL_ACCEPT = 'image/png,image/jpeg,image/jpg,application/pdf';
 
-function StepCard({
-  label,
-  stepNumber,
-  done,
-  current,
+const MANIFEST_HELP_ITEMS = [
+  {
+    label: 'One Row',
+    value: 'Each row should describe one application record that needs review.',
+  },
+  {
+    label: 'Example',
+    value:
+      'One row for GOOD TIMES with label_filename set to the exact uploaded file name.',
+  },
+  {
+    label: 'Required Match',
+    value:
+      'Include a label_filename column so each row can match one uploaded label file.',
+  },
+  {
+    label: 'Accepted',
+    value: '.csv',
+  },
+];
+
+const IMAGE_SET_HELP_ITEMS = [
+  {
+    label: 'Upload These',
+    value: 'Upload the actual label image or PDF files that belong to the manifest rows.',
+  },
+  {
+    label: 'Example',
+    value:
+      'If the manifest says demo20_001_clean_good_times_rye.png, upload that exact file name.',
+  },
+  {
+    label: 'Filename Rule',
+    value:
+      'Each uploaded filename should match the label_filename value in the CSV manifest.',
+  },
+  {
+    label: 'Accepted',
+    value: '.png, .jpg, .jpeg, or .pdf',
+  },
+];
+
+interface BatchProgressState {
+  currentLabel: string | null;
+  processedCount: number;
+  totalCount: number;
+}
+
+interface BatchPreflightSummary {
+  extraCount: number;
+  extraFilenames: string[];
+  fileCount: number;
+  manifestCount: number;
+  matchedCount: number;
+  missingCount: number;
+  missingFilenames: string[];
+  ready: boolean;
+}
+
+interface BatchRunItem {
+  file: File;
+  manifestItem: BatchManifestItem;
+}
+
+interface BatchRunResult {
+  item: SessionBatchItem;
+  review: SessionReviewRecord;
+}
+
+function ReceiptGrid({
+  items,
 }: {
-  label: string;
-  stepNumber: number;
-  done?: boolean;
-  current?: boolean;
+  items: Array<{ label: string; value: string }>;
 }) {
   return (
-    <div className={cn('bg-surface px-5 py-4', done ? 'bg-[#F4FBF6]' : undefined)}>
-      <div className="flex items-center gap-3">
-        {done ? (
-          <div className="flex size-6 items-center justify-center rounded-full border border-pass bg-pass text-surface">
-            <Check size={14} />
-          </div>
-        ) : (
-          <span
-            className={cn(
-              'inline-flex rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em]',
-              current
-                ? 'border-emerald-500 bg-[#F2FFF6] text-emerald-700'
-                : 'border-border text-muted'
-            )}
-          >
-            {`Step ${stepNumber}`}
-          </span>
-        )}
-        <span
-          className={cn(
-            'text-[10px] font-bold uppercase tracking-[0.18em]',
-            done ? 'text-pass' : current ? 'text-fg' : 'text-muted'
-          )}
-        >
-          {done ? `${label} Added` : label}
-        </span>
+    <div className="grid gap-3 md:grid-cols-2">
+      {items.map((item) => (
+        <div key={item.label} className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
+            {item.label}
+          </p>
+          <p className="text-sm leading-6 text-fg">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ManifestExamplePreview() {
+  return (
+    <div className="rounded-[1rem] border border-border bg-surface px-4 py-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+        Example manifest row
+      </p>
+      <div className="mt-3 overflow-hidden rounded-[0.9rem] border border-border">
+        <div className="grid grid-cols-[6rem_1fr_1fr] gap-px bg-border text-[9px] font-bold uppercase tracking-[0.12em] text-muted">
+          <div className="bg-surface-muted px-3 py-2">Reference</div>
+          <div className="bg-surface-muted px-3 py-2">Label File</div>
+          <div className="bg-surface-muted px-3 py-2">Brand</div>
+        </div>
+        <div className="grid grid-cols-[6rem_1fr_1fr] gap-px bg-border text-sm text-fg">
+          <div className="bg-surface px-3 py-2">DEMO20-001</div>
+          <div className="bg-surface px-3 py-2">good_times_rye.png</div>
+          <div className="bg-surface px-3 py-2">GOOD TIMES</div>
+        </div>
       </div>
     </div>
   );
 }
 
-function UploadCard({
-  title,
-  description,
-  actionLabel,
-  helperText,
-  icon,
-  complete,
-  active,
-  onClick,
-  onDropFiles,
-}: {
-  title: string;
-  description: string;
-  actionLabel: string;
-  helperText: string;
-  icon: ReactNode;
-  complete: boolean;
-  active: boolean;
-  onClick: () => void;
-  onDropFiles: (files: FileList) => void;
-}) {
-  const [dragOver, setDragOver] = useState(false);
+function ImageSetExamplePreview() {
+  return (
+    <div className="rounded-[1rem] border border-border bg-surface px-4 py-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+        Example file set
+      </p>
+      <div className="mt-3 space-y-2">
+        {[
+          'good_times_rye.png',
+          'good_old_times_light_whiskey.png',
+          'saperavi_qvevri_wine.pdf',
+        ].map((filename) => (
+          <div
+            key={filename}
+            className="flex items-center justify-between rounded-[0.8rem] bg-surface-muted px-3 py-2"
+          >
+            <p className="text-sm leading-6 text-fg">{filename}</p>
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+              Match
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-  const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    setDragOver(false);
-    if (event.dataTransfer.files?.length) {
-      onDropFiles(event.dataTransfer.files);
-    }
-  };
+function ManifestReceipt({
+  itemCount,
+  manifestName,
+}: {
+  itemCount: number;
+  manifestName: string | null;
+}) {
+  if (!manifestName || itemCount === 0) {
+    return null;
+  }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={handleDrop}
-      className={cn(
-        'group relative flex w-full cursor-pointer flex-col items-start justify-between overflow-hidden border bg-surface p-8 text-left transition-colors hover:bg-hover md:min-h-[18rem] md:p-10',
-        complete
-          ? 'border-pass bg-[#F4FBF6]'
-          : dragOver
-            ? 'border-emerald-500 bg-[#F7FFF9] shadow-[0_0_0_1px_rgba(16,185,129,0.35),0_0_28px_rgba(16,185,129,0.16)]'
-            : active
-              ? 'border-emerald-500 bg-surface shadow-[0_0_0_1px_rgba(16,185,129,0.45),0_0_32px_rgba(16,185,129,0.18)]'
-              : 'border-border'
-      )}
-    >
-      <div className="space-y-3">
-        <p className="app-data-label">{title}</p>
-        <h2
-          className={cn(
-            'display-serif text-[2rem] leading-[1.12] tracking-[0.01em]',
-            complete ? 'text-pass' : undefined
-          )}
-        >
-          {complete ? 'Done' : title}
-        </h2>
-        <p className="max-w-sm text-sm leading-6 text-subtle">{description}</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-pass">
+          Parsed successfully
+        </p>
+        <p className="text-xs leading-5 text-muted">{manifestName}</p>
       </div>
+      <ReceiptGrid
+        items={[
+          { label: 'Rows', value: String(itemCount) },
+          { label: 'Ready For Match', value: itemCount === 1 ? '1 label file' : `${itemCount} label files` },
+        ]}
+      />
+    </div>
+  );
+}
 
-      <div className="flex w-full items-end justify-between gap-6 pt-10">
-        <div className="space-y-2">
-          <p
-            className={cn(
-              'text-[10px] font-bold uppercase tracking-[0.18em] transition-opacity',
-              complete ? 'text-pass' : 'text-fg opacity-60 group-hover:opacity-100'
-            )}
-          >
-            {complete ? 'Added' : actionLabel}
-          </p>
-          <p className="text-xs leading-5 text-muted">{helperText}</p>
-        </div>
-        <div
-          className={cn(
-            'flex size-12 items-center justify-center border transition-colors',
-            complete
-              ? 'border-pass bg-pass text-surface'
-              : 'border-border text-muted group-hover:bg-fg group-hover:text-surface'
-          )}
-        >
-          {complete ? <Check size={18} /> : icon}
-        </div>
-      </div>
-    </button>
+function ImageSetReceipt({
+  imageFiles,
+}: {
+  imageFiles: File[];
+}) {
+  if (imageFiles.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-pass">
+        Files added
+      </p>
+      <ReceiptGrid
+        items={[
+          { label: 'Files', value: String(imageFiles.length) },
+          { label: 'First File', value: imageFiles[0].name },
+        ]}
+      />
+    </div>
   );
 }
 
 function getInstruction(hasManifest: boolean, hasImages: boolean) {
   if (!hasManifest) {
     return {
-      detail:
-        'Upload the file that lists each application record for the batch.',
-      title: 'Please add the CSV manifest.',
+      detail: 'Upload the manifest that lists the batch application records.',
+      title: 'Add the CSV manifest.',
     };
   }
 
   if (!hasImages) {
     return {
       detail:
-        'The manifest is ready. Upload the individual label files that match the CSV records.',
-      title: 'Please add the label images.',
+        'Upload the label files that should match the manifest rows.',
+      title: 'Add the label images.',
     };
   }
 
   return {
     detail:
-      'Both files are ready. Review the CSV manifest and label images together.',
-    title: 'Everything is ready.',
+      'Check the preflight summary, then review the batch when everything is matched.',
+    title: 'Ready to review.',
   };
 }
 
+function PreflightStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="space-y-1 bg-surface px-5 py-4">
+      <p className="app-data-label">{label}</p>
+      <p className="display-serif text-[1.55rem] leading-none tracking-[0.01em] text-fg">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function BatchPreflightPanel({
+  summary,
+}: {
+  summary: BatchPreflightSummary;
+}) {
+  const message = summary.ready
+    ? 'Every manifest row has a matching label file. The batch is ready to review.'
+    : summary.manifestCount === 0
+      ? 'Add the CSV manifest to see the batch summary.'
+      : summary.fileCount === 0
+        ? 'Add the label files to complete the batch.'
+        : summary.missingCount > 0 || summary.extraCount > 0
+          ? 'The batch is not ready yet. Fix the missing or extra files before reviewing.'
+          : 'Review the counts before starting the batch.';
+
+  return (
+    <section className="space-y-4">
+      <div className="space-y-1">
+        <SectionEyebrow>Preflight Summary</SectionEyebrow>
+        <p className="text-sm leading-6 text-subtle">{message}</p>
+      </div>
+
+      <div className="app-grid-frame grid grid-cols-2 gap-px md:grid-cols-5">
+        <PreflightStat label="Rows" value={String(summary.manifestCount)} />
+        <PreflightStat label="Files" value={String(summary.fileCount)} />
+        <PreflightStat label="Matched" value={String(summary.matchedCount)} />
+        <PreflightStat label="Missing" value={String(summary.missingCount)} />
+        <PreflightStat label="Extra" value={String(summary.extraCount)} />
+      </div>
+
+      {summary.missingFilenames.length > 0 ? (
+        <details className="rounded-[1rem] border border-border bg-surface px-4 py-4">
+          <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.16em] text-fail">
+            Missing files
+          </summary>
+          <div className="mt-3 space-y-2">
+            {summary.missingFilenames.map((filename) => (
+              <p key={filename} className="text-sm leading-6 text-fg">
+                {filename}
+              </p>
+            ))}
+          </div>
+        </details>
+      ) : null}
+
+      {summary.extraFilenames.length > 0 ? (
+        <details className="rounded-[1rem] border border-border bg-surface px-4 py-4">
+          <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.16em] text-review">
+            Extra files
+          </summary>
+          <div className="mt-3 space-y-2">
+            {summary.extraFilenames.map((filename) => (
+              <p key={filename} className="text-sm leading-6 text-fg">
+                {filename}
+              </p>
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
 function BatchUploadStage({
+  canStart,
   hasManifest,
   hasImages,
+  imageFiles,
+  imagesError,
   imagesLabel,
+  manifestError,
   manifestName,
-  onManifestUpload,
   onImagesUpload,
+  onManifestUpload,
   onStart,
+  preflightSummary,
+  submitError,
 }: {
+  canStart: boolean;
   hasManifest: boolean;
   hasImages: boolean;
+  imageFiles: File[];
+  imagesError: string | null;
   imagesLabel: string | null;
+  manifestError: string | null;
   manifestName: string | null;
-  onManifestUpload: (files: FileList) => void;
   onImagesUpload: (files: FileList) => void;
+  onManifestUpload: (files: FileList) => void;
   onStart: () => void;
+  preflightSummary: BatchPreflightSummary;
+  submitError: string | null;
 }) {
-  const manifestInputRef = useRef<HTMLInputElement>(null);
-  const imagesInputRef = useRef<HTMLInputElement>(null);
   const instruction = getInstruction(hasManifest, hasImages);
+  const imagesInputRef = useRef<HTMLInputElement>(null);
+  const manifestInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <PageShell className="app-stage max-w-5xl space-y-10 py-10 md:space-y-12 md:py-12">
@@ -207,14 +362,16 @@ function BatchUploadStage({
         <p className="max-w-2xl text-sm leading-6 text-subtle">{instruction.detail}</p>
       </div>
 
+      {submitError ? <InlineError message={submitError} /> : null}
+
       <div className="app-grid-frame grid grid-cols-1 gap-px md:grid-cols-2">
-        <StepCard
+        <IntakeStepCard
           label="CSV Manifest"
           stepNumber={1}
           done={hasManifest}
           current={!hasManifest}
         />
-        <StepCard
+        <IntakeStepCard
           label="Label Images"
           stepNumber={2}
           done={hasImages}
@@ -223,40 +380,60 @@ function BatchUploadStage({
       </div>
 
       <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-2">
-        <UploadCard
+        <IntakeUploadCard
           title="CSV Manifest"
-          description="The CSV file with one application record per row. Use the required manifest column format."
+          description="Upload the batch manifest with one application record per row."
           actionLabel="Upload CSV"
           helperText={manifestName ?? 'Drag and drop a .csv file, or browse'}
+          acceptedFormats={['.csv']}
+          completeDetails={
+            hasManifest ? (
+              <ManifestReceipt itemCount={preflightSummary.manifestCount} manifestName={manifestName} />
+            ) : null
+          }
+          examplePreview={<ManifestExamplePreview />}
+          helpItems={MANIFEST_HELP_ITEMS}
+          helpTitle="What should this file look like?"
           complete={hasManifest}
           active={!hasManifest}
+          errorMessage={manifestError}
           onClick={() => manifestInputRef.current?.click()}
           onDropFiles={onManifestUpload}
+          onReplace={() => manifestInputRef.current?.click()}
           icon={<FileSpreadsheet size={20} />}
         />
-        <UploadCard
+        <IntakeUploadCard
           title="Label Images"
-          description="The individual PNG, JPG, or PDF label files listed in the CSV manifest. Upload the files directly, not as a zip."
+          description="Upload the label files that belong to the manifest rows."
           actionLabel="Upload Images"
           helperText={imagesLabel ?? 'Drag and drop .png, .jpg, or .pdf files, or browse'}
+          acceptedFormats={['.png', '.jpg', '.pdf']}
+          completeDetails={hasImages ? <ImageSetReceipt imageFiles={imageFiles} /> : null}
+          examplePreview={<ImageSetExamplePreview />}
+          helpItems={IMAGE_SET_HELP_ITEMS}
+          helpTitle="What should these files look like?"
           complete={hasImages}
           active={hasManifest && !hasImages}
+          errorMessage={imagesError}
           onClick={() => imagesInputRef.current?.click()}
           onDropFiles={onImagesUpload}
+          onReplace={() => imagesInputRef.current?.click()}
           icon={<Images size={20} />}
         />
       </div>
 
+      <BatchPreflightPanel summary={preflightSummary} />
+
       <div className="flex items-center justify-between border-t border-border pt-8">
         <p className="text-sm italic text-subtle">
-          {hasManifest && hasImages
-            ? 'CSV manifest and label images added.'
-            : 'Add both files to continue.'}
+          {canStart
+            ? 'Everything is matched. Review the batch when you are ready.'
+            : 'Add both inputs and resolve any missing or extra files to continue.'}
         </p>
         <button
           type="button"
           onClick={onStart}
-          disabled={!hasManifest || !hasImages}
+          disabled={!canStart}
           className="app-solid-button min-w-44 items-center gap-2 disabled:cursor-not-allowed disabled:opacity-35"
         >
           <Upload size={14} />
@@ -283,15 +460,20 @@ function BatchUploadStage({
   );
 }
 
-function BatchProcessingStage({ progress }: { progress: number }) {
+function BatchProcessingStage({ progress }: { progress: BatchProgressState }) {
+  const progressPercent =
+    progress.totalCount === 0
+      ? 0
+      : Math.round((progress.processedCount / progress.totalCount) * 100);
+
   return (
     <PageShell className="app-stage max-w-4xl space-y-16 py-16">
       <div className="space-y-8">
         <BackLink href="/">Back</BackLink>
         <PageHeading
           eyebrow="Batch Review"
-          title="CSV Manifest and Label Images"
-          subtitle="Comparing the manifest to the uploaded image set."
+          title="Reviewing Batch"
+          subtitle="Running the same label comparison flow for each manifest row and matching label file."
           className="border-b-0 pb-0"
         />
       </div>
@@ -301,167 +483,271 @@ function BatchProcessingStage({ progress }: { progress: number }) {
           <div className="relative h-px overflow-hidden bg-[#E3DBCF]">
             <div
               className="absolute inset-y-0 left-0 bg-fg transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-fg">
-            Comparing Manifest and Images
-          </p>
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-fg">
+              {progress.processedCount} of {progress.totalCount} reviews completed
+            </p>
+            <p className="text-sm leading-6 text-subtle">
+              {progress.currentLabel
+                ? `Most recent file: ${progress.currentLabel}`
+                : 'Preparing batch review jobs.'}
+            </p>
+          </div>
         </div>
       </div>
     </PageShell>
   );
 }
 
-function BatchStat({
-  count,
-  label,
-  tone,
+function createFailedBatchReview({
+  application,
+  batchId,
+  errorMessage,
+  file,
 }: {
-  count: number;
-  label: string;
-  tone: keyof typeof STATUS_TONE_STYLES;
-}) {
-  return (
-    <div className="bg-surface p-8">
-      <p className={`font-serif text-4xl ${STATUS_TONE_STYLES[tone].accentTextClass}`}>
-        {count}
-      </p>
-      <p
-        className={`mt-2 text-[10px] font-bold uppercase tracking-[0.18em] ${STATUS_TONE_STYLES[tone].accentTextClass}`}
-      >
-        {label}
-      </p>
-    </div>
-  );
+  application: BatchManifestItem['application'];
+  batchId: string;
+  errorMessage: string;
+  file: File;
+}): StatelessReviewResult {
+  return {
+    application,
+    batch_id: batchId,
+    created_at: new Date().toISOString(),
+    error_message: errorMessage,
+    extraction_raw: null,
+    field_results: [],
+    id: `review_${crypto.randomUUID()}`,
+    label: {
+      file_size_bytes: file.size,
+      file_store_id: null,
+      filename: file.name,
+      mime_type: file.type,
+    },
+    latency_ms: 0,
+    source: 'batch',
+    status: 'failed_system',
+    summary: { fail: 0, needs_review: 0, pass: 0, skipped: 0 },
+  };
 }
 
-function BatchResultRow({ item }: { item: BatchResultItem }) {
-  return (
-    <Link
-      href={item.href}
-      className="group grid grid-cols-1 gap-6 bg-surface p-8 transition-colors hover:bg-bg md:grid-cols-[1.7fr_1fr_1fr_auto] md:items-center"
-    >
-      <div>
-        <p className="app-data-label">Brand Name</p>
-        <p className="mt-1 font-serif text-2xl text-fg">{item.brand}</p>
-      </div>
-      <div>
-        <p className="app-data-label">Class / Type</p>
-        <p className="mt-1 text-sm text-subtle">{item.type}</p>
-      </div>
-      <div>
-        <p className="app-data-label">Status</p>
-        <StatusBadge
-          tone={item.tone}
-          label={item.label}
-          emphasize
-          className="mt-2"
-        />
-      </div>
-      <div className="flex items-center justify-between gap-6 md:justify-end">
-        <div className="text-right">
-          <p className="app-data-label">ID</p>
-          <p className="mt-1 font-serif text-xs italic text-fg">{item.id}</p>
-        </div>
-        <ChevronRight
-          size={18}
-          className="text-border transition-colors group-hover:text-fg"
-        />
-      </div>
-    </Link>
-  );
+function toSessionBatchItem({
+  batchId,
+  manifestItem,
+  review,
+}: {
+  batchId: string;
+  manifestItem: BatchManifestItem;
+  review: SessionReviewRecord;
+}): SessionBatchItem {
+  return {
+    application: manifestItem.application,
+    batch_id: batchId,
+    created_at: review.created_at,
+    error_message: review.error_message,
+    external_reference: manifestItem.external_reference,
+    id: `${batchId}:${manifestItem.row_number}`,
+    label_filename: manifestItem.label_filename,
+    review_id: review.id,
+    review_status: review.status,
+    review_summary: review.summary,
+    row_number: manifestItem.row_number,
+    status: review.status === 'failed_system' ? 'failed' : 'completed',
+  };
 }
 
-function BatchResultStage({
-  onReset,
+function buildBatchFileErrorMessage(missingFilenames: string[], extraFiles: File[]): string {
+  const problems: string[] = [];
+
+  if (missingFilenames.length > 0) {
+    const preview = missingFilenames.slice(0, 3).join(', ');
+    const suffix = missingFilenames.length > 3 ? `, and ${missingFilenames.length - 3} more` : '';
+    problems.push(`Missing label files for: ${preview}${suffix}.`);
+  }
+
+  if (extraFiles.length > 0) {
+    const preview = extraFiles
+      .slice(0, 3)
+      .map((file) => file.name)
+      .join(', ');
+    const suffix = extraFiles.length > 3 ? `, and ${extraFiles.length - 3} more` : '';
+    problems.push(`These uploaded files are not listed in the manifest: ${preview}${suffix}.`);
+  }
+
+  return problems.join(' ');
+}
+
+async function runBatchReviews({
+  batchId,
+  onProgress,
+  runItems,
 }: {
-  onReset: () => void;
-}) {
-  const passCount = BATCH_RESULTS.filter((item) => item.tone === 'pass').length;
-  const reviewCount = BATCH_RESULTS.filter((item) => item.tone === 'review').length;
-  const failCount = BATCH_RESULTS.filter((item) => item.tone === 'fail').length;
+  batchId: string;
+  onProgress: (progress: BatchProgressState) => void;
+  runItems: BatchRunItem[];
+}): Promise<BatchRunResult[]> {
+  const results: BatchRunResult[] = new Array(runItems.length);
+  let completedCount = 0;
+  let nextIndex = 0;
 
-  return (
-    <PageShell className="app-stage max-w-5xl space-y-16">
-      <PageHeading
-        eyebrow="Batch Review"
-        title="Batch Review Results"
-        subtitle="Review the batch queue after comparing the CSV manifest to the label images."
-        actions={
-          <button type="button" onClick={onReset} className="app-outline-button">
-            New Batch
-          </button>
-        }
-      />
+  const workerCount = Math.min(BATCH_CONCURRENCY, runItems.length);
 
-      <section className="app-grid-frame grid grid-cols-1 gap-px md:grid-cols-3">
-        <BatchStat count={passCount} label="Pass" tone="pass" />
-        <BatchStat count={reviewCount} label="Needs Review" tone="review" />
-        <BatchStat count={failCount} label="Likely Fail" tone="fail" />
-      </section>
+  async function processItem(runItem: BatchRunItem): Promise<BatchRunResult> {
+    const { file, manifestItem } = runItem;
 
-      <section className="space-y-6">
-        <div className="flex items-end justify-between border-b border-border pb-6">
-          <SectionEyebrow>Dashboard</SectionEyebrow>
-          <button type="button" className="app-solid-button">
-            Export CSV
-          </button>
-        </div>
+    try {
+      const reviewResponse = await submitReviewRequest(manifestItem.application, file, {
+        batchId,
+        source: 'batch',
+      });
+      const storedReview = await persistSessionReview(reviewResponse, file);
 
-        <div className="app-grid-frame space-y-px">
-          {BATCH_RESULTS.map((item) => (
-            <BatchResultRow key={item.id} item={item} />
-          ))}
-        </div>
-      </section>
-    </PageShell>
-  );
+      return {
+        item: toSessionBatchItem({
+          batchId,
+          manifestItem,
+          review: storedReview,
+        }),
+        review: storedReview,
+      };
+    } catch (error) {
+      const reviewResponse = createFailedBatchReview({
+        application: manifestItem.application,
+        batchId,
+        errorMessage:
+          error instanceof Error ? error.message : 'The review could not be completed.',
+        file,
+      });
+      const storedReview = await persistSessionReview(reviewResponse, file);
+
+      return {
+        item: toSessionBatchItem({
+          batchId,
+          manifestItem,
+          review: storedReview,
+        }),
+        review: storedReview,
+      };
+    }
+  }
+
+  async function worker(): Promise<void> {
+    while (nextIndex < runItems.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+
+      const runItem = runItems[currentIndex];
+      const result = await processItem(runItem);
+      results[currentIndex] = result;
+
+      completedCount += 1;
+      onProgress({
+        currentLabel: runItem.manifestItem.label_filename,
+        processedCount: completedCount,
+        totalCount: runItems.length,
+      });
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
 }
 
 export function BatchPage() {
-  const [stage, setStage] = useState<BatchStage>('upload');
-  const [manifestName, setManifestName] = useState<string | null>(null);
+  const [batch, setBatch] = useState<SessionBatchRecord | null>(null);
+  const [batchReviews, setBatchReviews] = useState<SessionReviewRecord[]>([]);
+  const [imagesError, setImagesError] = useState<string | null>(null);
   const [imagesLabel, setImagesLabel] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [manifestError, setManifestError] = useState<string | null>(null);
+  const [manifestItems, setManifestItems] = useState<BatchManifestItem[]>([]);
+  const [manifestName, setManifestName] = useState<string | null>(null);
+  const [progress, setProgress] = useState<BatchProgressState>({
+    currentLabel: null,
+    processedCount: 0,
+    totalCount: 0,
+  });
+  const [stage, setStage] = useState<BatchStage>('upload');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const hasManifest = Boolean(manifestName);
-  const hasImages = Boolean(imagesLabel);
-
-  useEffect(() => {
-    if (stage !== 'processing') {
-      return;
+  const hasImages = imageFiles.length > 0;
+  const hasManifest = manifestItems.length > 0;
+  const preflightSummary = useMemo<BatchPreflightSummary>(() => {
+    if (!hasManifest && !hasImages) {
+      return {
+        extraCount: 0,
+        extraFilenames: [],
+        fileCount: 0,
+        manifestCount: 0,
+        matchedCount: 0,
+        missingCount: 0,
+        missingFilenames: [],
+        ready: false,
+      };
     }
 
-    const intervalId = window.setInterval(() => {
-      setProgress((current) => {
-        if (current >= 100) {
-          window.clearInterval(intervalId);
-          return 100;
-        }
-
-        return current + 5;
-      });
-    }, 50);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [stage]);
-
-  useEffect(() => {
-    if (stage !== 'processing' || progress < 100) {
-      return;
+    if (!hasManifest) {
+      return {
+        extraCount: imageFiles.length,
+        extraFilenames: imageFiles.map((file) => file.name),
+        fileCount: imageFiles.length,
+        manifestCount: 0,
+        matchedCount: 0,
+        missingCount: 0,
+        missingFilenames: [],
+        ready: false,
+      };
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setStage('result');
-    }, 500);
+    if (!hasImages) {
+      return {
+        extraCount: 0,
+        extraFilenames: [],
+        fileCount: 0,
+        manifestCount: manifestItems.length,
+        matchedCount: 0,
+        missingCount: manifestItems.length,
+        missingFilenames: manifestItems.map((item) => item.label_filename),
+        ready: false,
+      };
+    }
 
-    return () => {
-      window.clearTimeout(timeoutId);
+    const matchedFiles = matchBatchFiles(manifestItems, imageFiles);
+    return {
+      extraCount: matchedFiles.extraFiles.length,
+      extraFilenames: matchedFiles.extraFiles.map((file) => file.name),
+      fileCount: imageFiles.length,
+      manifestCount: manifestItems.length,
+      matchedCount: matchedFiles.filesByLabelFilename.size,
+      missingCount: matchedFiles.missingFilenames.length,
+      missingFilenames: matchedFiles.missingFilenames,
+      ready:
+        matchedFiles.extraFiles.length === 0 &&
+        matchedFiles.missingFilenames.length === 0,
     };
-  }, [progress, stage]);
+  }, [hasImages, hasManifest, imageFiles, manifestItems]);
+  const canStart = hasManifest && hasImages && preflightSummary.ready;
+
+  const resetBatch = () => {
+    setBatch(null);
+    setBatchReviews([]);
+    setImagesError(null);
+    setImagesLabel(null);
+    setImageFiles([]);
+    setManifestError(null);
+    setManifestItems([]);
+    setManifestName(null);
+    setProgress({
+      currentLabel: null,
+      processedCount: 0,
+      totalCount: 0,
+    });
+    setStage('upload');
+    setSubmitError(null);
+  };
 
   const handleManifestUpload = (files: FileList) => {
     const file = files[0];
@@ -469,7 +755,22 @@ export function BatchPage() {
       return;
     }
 
-    setManifestName(file.name);
+    setManifestError(null);
+    setSubmitError(null);
+
+    void (async () => {
+      try {
+        const parsedManifest = await parseBatchManifest(file);
+        setManifestItems(parsedManifest);
+        setManifestName(file.name);
+      } catch (error) {
+        setManifestItems([]);
+        setManifestName(null);
+        setManifestError(
+          error instanceof Error ? error.message : 'The CSV manifest could not be read.'
+        );
+      }
+    })();
   };
 
   const handleImagesUpload = (files: FileList) => {
@@ -477,24 +778,105 @@ export function BatchPage() {
       return;
     }
 
-    setImagesLabel(
-      files.length === 1 ? files[0].name : `${files.length} image files added`
-    );
+    setImagesError(null);
+    setSubmitError(null);
+
+    try {
+      const fileList = Array.from(files);
+      validateBatchLabelFiles(fileList);
+      setImageFiles(fileList);
+      setImagesLabel(
+        fileList.length === 1 ? fileList[0].name : `${fileList.length} label files added`
+      );
+    } catch (error) {
+      setImageFiles([]);
+      setImagesLabel(null);
+      setImagesError(
+        error instanceof Error ? error.message : 'The label files could not be used.'
+      );
+    }
+  };
+
+  const startBatch = async () => {
+    if (!hasManifest || !hasImages) {
+      return;
+    }
+
+    const matchedFiles = matchBatchFiles(manifestItems, imageFiles);
+    if (matchedFiles.missingFilenames.length > 0 || matchedFiles.extraFiles.length > 0) {
+      setSubmitError(
+        buildBatchFileErrorMessage(
+          matchedFiles.missingFilenames,
+          matchedFiles.extraFiles
+        )
+      );
+      return;
+    }
+
+    const batchId = `batch_${crypto.randomUUID()}`;
+    const createdAt = new Date().toISOString();
+    const runItems = manifestItems.map((manifestItem) => ({
+      file: matchedFiles.filesByLabelFilename.get(manifestItem.label_filename)!,
+      manifestItem,
+    }));
+
+    setStage('processing');
+    setProgress({
+      currentLabel: null,
+      processedCount: 0,
+      totalCount: runItems.length,
+    });
+    setSubmitError(null);
+
+    try {
+      const results = await runBatchReviews({
+        batchId,
+        onProgress: setProgress,
+        runItems,
+      });
+
+      const reviews = results.map((result) => result.review);
+      const batchRecord: SessionBatchRecord = {
+        completed_at: new Date().toISOString(),
+        concurrency: BATCH_CONCURRENCY,
+        created_at: createdAt,
+        failed_items: results.filter((result) => result.item.status === 'failed').length,
+        id: batchId,
+        items: results.map((result) => result.item),
+        name: manifestName?.replace(/\.csv$/i, '') || 'Batch Review',
+        processed_items: results.length,
+        status: 'completed',
+        total_items: results.length,
+      };
+
+      saveSessionBatch(batchRecord);
+      setBatch(batchRecord);
+      setBatchReviews(reviews);
+      setStage('result');
+    } catch (error) {
+      setStage('upload');
+      setSubmitError(
+        error instanceof Error ? error.message : 'The batch review could not be completed.'
+      );
+    }
   };
 
   if (stage === 'upload') {
     return (
       <BatchUploadStage
+        canStart={canStart}
         hasManifest={hasManifest}
         hasImages={hasImages}
+        imageFiles={imageFiles}
+        imagesError={imagesError}
         imagesLabel={imagesLabel}
+        manifestError={manifestError}
         manifestName={manifestName}
-        onManifestUpload={handleManifestUpload}
         onImagesUpload={handleImagesUpload}
-        onStart={() => {
-          setProgress(0);
-          setStage('processing');
-        }}
+        onManifestUpload={handleManifestUpload}
+        onStart={() => void startBatch()}
+        preflightSummary={preflightSummary}
+        submitError={submitError}
       />
     );
   }
@@ -503,14 +885,15 @@ export function BatchPage() {
     return <BatchProcessingStage progress={progress} />;
   }
 
+  if (!batch) {
+    return null;
+  }
+
   return (
-    <BatchResultStage
-      onReset={() => {
-        setManifestName(null);
-        setImagesLabel(null);
-        setProgress(0);
-        setStage('upload');
-      }}
+    <BatchResultView
+      batch={batch}
+      onStartNew={resetBatch}
+      reviews={batchReviews}
     />
   );
 }

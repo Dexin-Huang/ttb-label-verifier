@@ -1,17 +1,35 @@
 import type {
+  FieldResult,
   ReviewStatus,
   SessionReviewRecord,
   StatelessReviewResult,
 } from '@/lib/types';
+import {
+  FIELD_LABELS,
+  formatApplicationValue,
+  formatExtractedValue,
+  formatReasonLabel,
+} from '@/lib/review-display';
+import { clearSessionBatches } from '@/lib/review-batches';
 import { clearReviewFiles, saveReviewFile } from '@/lib/review-session-files';
 
 const SESSION_REVIEWS_KEY = 'label-verifier-session-reviews';
+
+export interface DashboardIssueItem {
+  applicationValue: string;
+  extractedValue: string;
+  fieldLabel: string;
+  fieldType: FieldResult['field_type'] | 'system_error';
+  reasonLabel: string;
+  tone: 'review' | 'fail';
+}
 
 export interface DashboardHistoryItem {
   brand: string;
   href: string;
   id: string;
   issueCount: number;
+  issues: DashboardIssueItem[];
   label: string;
   reviewedAt: string;
   source: 'Single Review' | 'Batch Review';
@@ -117,6 +135,7 @@ export async function clearSessionReviews(): Promise<void> {
   }
 
   window.sessionStorage.removeItem(SESSION_REVIEWS_KEY);
+  clearSessionBatches();
 }
 
 export function saveSessionReview(review: SessionReviewRecord): void {
@@ -143,12 +162,58 @@ export async function persistSessionReview(
   return storedReview;
 }
 
+function issueSortWeight(field: FieldResult): number {
+  if (field.status === 'fail') {
+    return 0;
+  }
+
+  if (field.status === 'needs_review') {
+    return 1;
+  }
+
+  return 2;
+}
+
+function toDashboardIssueItems(review: SessionReviewRecord): DashboardIssueItem[] {
+  const issues: DashboardIssueItem[] = review.field_results
+    .filter((field) => field.status === 'fail' || field.status === 'needs_review')
+    .sort((left, right) => issueSortWeight(left) - issueSortWeight(right))
+    .map((field) => ({
+      applicationValue: formatApplicationValue(field),
+      extractedValue: formatExtractedValue(field),
+      fieldLabel: FIELD_LABELS[field.field_type],
+      fieldType: field.field_type,
+      reasonLabel: formatReasonLabel(field.reason_code),
+      tone: field.status === 'fail' ? 'fail' : 'review',
+    }));
+
+  if (issues.length > 0) {
+    return issues;
+  }
+
+  if (review.status === 'failed_system') {
+    return [
+      {
+        applicationValue: 'Application data provided',
+        extractedValue: review.error_message ?? 'The review did not complete successfully.',
+        fieldLabel: 'System Error',
+        fieldType: 'system_error',
+        reasonLabel: 'Review could not be completed',
+        tone: 'fail',
+      },
+    ];
+  }
+
+  return [];
+}
+
 export function toDashboardHistoryItems(reviews: SessionReviewRecord[]): DashboardHistoryItem[] {
   return reviews.map((review) => ({
     brand: review.application.brand_name,
     href: `/reviews/${review.id}`,
     id: review.id,
     issueCount: getIssueCount(review),
+    issues: toDashboardIssueItems(review),
     label: getReviewStatusLabel(review.status),
     reviewedAt: formatReviewDate(review.created_at),
     source: review.source === 'batch' ? 'Batch Review' : 'Single Review',

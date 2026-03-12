@@ -1,180 +1,217 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type DragEvent,
-  type ReactNode,
-} from 'react';
-import { AlertCircle, Check, FileText, ImagePlus, Upload } from 'lucide-react';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
+import { FileText, ImagePlus, Upload } from 'lucide-react';
 import type { CreateApplicationRequest, SessionReviewRecord } from '@/lib/types';
 import { parseApplicationUpload } from '@/lib/application-upload';
 import { submitReviewRequest } from '@/lib/review-request';
 import { persistSessionReview } from '@/lib/review-session';
-import { cn } from '@/lib/utils';
 import { PageShell, SectionEyebrow } from './chrome';
+import { InlineError, IntakeStepCard, IntakeUploadCard } from './intake';
 import { ReviewResultView } from './review-result';
 
 type ReviewStage = 'upload' | 'processing' | 'result';
 
+const FORM_HELP_ITEMS = [
+  {
+    label: 'Prototype Input',
+    value:
+      'Use the structured application record exported from the form system for this label.',
+  },
+  {
+    label: 'Example',
+    value:
+      'GOOD TIMES | STRAIGHT RYE WHISKEY | 57.5% ALC./VOL. 115 PROOF | 750ML',
+  },
+  {
+    label: 'Required Fields',
+    value:
+      'Brand name, class / type, alcohol content, net contents, and bottler / producer details.',
+  },
+  {
+    label: 'Accepted',
+    value: '.json or single-row .csv',
+  },
+];
+
+const IMAGE_HELP_ITEMS = [
+  {
+    label: 'Use This File',
+    value:
+      'Upload the label artwork image or PDF that should match the application form.',
+  },
+  {
+    label: 'Example',
+    value:
+      'A label image where the brand name, class / type, alcohol content, net contents, and warning statement are readable.',
+  },
+  {
+    label: 'What To Show',
+    value:
+      'The file should make the brand name, class / type, alcohol content, net contents, and warning statement readable.',
+  },
+  {
+    label: 'Accepted',
+    value: '.png, .jpg, .jpeg, or .pdf',
+  },
+];
+
 const LABEL_ACCEPT = 'image/png,image/jpeg,image/jpg,application/pdf';
 const LABEL_ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
 
-function StepCard({
-  label,
-  stepNumber,
-  done,
-  current,
+function ReceiptGrid({
+  items,
 }: {
-  label: string;
-  stepNumber: number;
-  done?: boolean;
-  current?: boolean;
+  items: Array<{ label: string; value: string }>;
 }) {
   return (
-    <div className={cn('bg-surface px-5 py-4', done ? 'bg-[#F4FBF6]' : undefined)}>
-      <div className="flex items-center gap-3">
-        {done ? (
-          <div className="flex size-6 items-center justify-center rounded-full border border-pass bg-pass text-surface">
-            <Check size={14} />
-          </div>
-        ) : (
-          <span
-            className={cn(
-              'inline-flex rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em]',
-              current
-                ? 'border-emerald-500 bg-[#F2FFF6] text-emerald-700'
-                : 'border-border text-muted'
-            )}
+    <div className="grid gap-3 md:grid-cols-2">
+      {items.map((item) => (
+        <div key={item.label} className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
+            {item.label}
+          </p>
+          <p className="text-sm leading-6 text-fg">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FormExamplePreview() {
+  return (
+    <div className="rounded-[1rem] border border-border bg-surface px-4 py-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+        Example record
+      </p>
+      <div className="mt-3 grid gap-2">
+        {[
+          ['brand_name', 'GOOD TIMES'],
+          ['class_type', 'STRAIGHT RYE WHISKEY'],
+          ['alcohol_content', '57.5% ALC./VOL. 115 PROOF'],
+          ['net_contents', '750ML'],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="grid gap-1 rounded-[0.8rem] bg-surface-muted px-3 py-2 md:grid-cols-[7.5rem_minmax(0,1fr)]"
           >
-            {`Step ${stepNumber}`}
-          </span>
-        )}
-        <span
-          className={cn(
-            'text-[10px] font-bold uppercase tracking-[0.18em]',
-            done ? 'text-pass' : current ? 'text-fg' : 'text-muted'
-          )}
-        >
-          {done ? `${label} Added` : label}
-        </span>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
+              {label}
+            </p>
+            <p className="text-sm leading-6 text-fg">{value}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function UploadCard({
-  title,
-  description,
-  actionLabel,
-  helperText,
-  icon,
-  complete,
-  active,
-  errorMessage,
-  onClick,
-  onDropFiles,
-}: {
-  title: string;
-  description: string;
-  actionLabel: string;
-  helperText: string;
-  icon: ReactNode;
-  complete: boolean;
-  active: boolean;
-  errorMessage?: string | null;
-  onClick: () => void;
-  onDropFiles: (files: FileList) => void;
-}) {
-  const [dragOver, setDragOver] = useState(false);
-
-  const handleDrop = (event: DragEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    setDragOver(false);
-    if (event.dataTransfer.files?.length) {
-      onDropFiles(event.dataTransfer.files);
-    }
-  };
-
+function LabelExamplePreview() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={handleDrop}
-      className={cn(
-        'group relative flex w-full cursor-pointer flex-col items-start justify-between overflow-hidden border bg-surface p-7 text-left transition-colors hover:bg-hover md:min-h-[15rem] md:p-8',
-        complete
-          ? 'border-pass bg-[#F4FBF6]'
-          : errorMessage
-            ? 'border-fail bg-[#FFF8F8]'
-            : dragOver
-              ? 'border-emerald-500 bg-[#F7FFF9] shadow-[0_0_0_1px_rgba(16,185,129,0.35),0_0_28px_rgba(16,185,129,0.16)]'
-              : active
-                ? 'border-emerald-500 bg-surface shadow-[0_0_0_1px_rgba(16,185,129,0.45),0_0_32px_rgba(16,185,129,0.18)]'
-                : 'border-border'
-      )}
-    >
-      <div className="space-y-3">
-        <p className="app-data-label">{title}</p>
-        <h2
-          className={cn(
-            'display-serif text-[1.8rem] leading-[1.12] tracking-[0.01em]',
-            complete ? 'text-pass' : errorMessage ? 'text-fail' : undefined
-          )}
-        >
-          {complete ? 'Done' : title}
-        </h2>
-        <p className="max-w-sm text-sm leading-6 text-subtle">{description}</p>
-      </div>
-
-      <div className="w-full space-y-3 pt-8">
-        <div className="flex w-full items-end justify-between gap-6">
-          <div className="space-y-2">
-            <p
-              className={cn(
-                'text-[10px] font-bold uppercase tracking-[0.18em] transition-opacity',
-                complete
-                  ? 'text-pass'
-                  : errorMessage
-                    ? 'text-fail'
-                    : 'text-fg opacity-60 group-hover:opacity-100'
-              )}
-            >
-              {complete ? 'Added' : actionLabel}
-            </p>
-            <p className={cn('text-xs leading-5', errorMessage ? 'text-fail' : 'text-muted')}>
-              {errorMessage ?? helperText}
+    <div className="rounded-[1rem] border border-border bg-surface px-4 py-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+        Example label
+      </p>
+      <div className="mt-3 flex items-start gap-4">
+        <div className="flex h-24 w-[4.5rem] shrink-0 items-center justify-center rounded-[0.9rem] border border-border bg-surface-muted px-3 text-center">
+          <div className="space-y-1">
+            <p className="display-serif text-base leading-none text-fg">GOOD TIMES</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted">
+              57.5%
             </p>
           </div>
-          <div
-            className={cn(
-              'flex size-12 items-center justify-center border transition-colors',
-              complete
-                ? 'border-pass bg-pass text-surface'
-                : errorMessage
-                  ? 'border-fail text-fail'
-                  : 'border-border text-muted group-hover:bg-fg group-hover:text-surface'
-            )}
-          >
-            {complete ? <Check size={18} /> : icon}
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm leading-6 text-fg">
+            The label should clearly show the brand name, class / type, alcohol content,
+            net contents, and warning statement.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {['Brand', 'Alcohol', 'Net Contents', 'Warning'].map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-border bg-surface-muted px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted"
+              >
+                {item}
+              </span>
+            ))}
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
-function InlineError({ message }: { message: string }) {
+function ApplicationReceipt({
+  application,
+  filename,
+}: {
+  application: CreateApplicationRequest | null;
+  filename: string | null;
+}) {
+  if (!application) {
+    return null;
+  }
+
   return (
-    <div className="flex items-start gap-3 border border-fail/25 bg-[#FFF8F8] px-4 py-4 text-sm text-fail">
-      <AlertCircle size={16} className="mt-0.5 shrink-0" />
-      <p>{message}</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-pass">
+          Parsed successfully
+        </p>
+        {filename ? (
+          <p className="text-xs leading-5 text-muted">{filename}</p>
+        ) : null}
+      </div>
+      <ReceiptGrid
+        items={[
+          { label: 'Brand', value: application.brand_name },
+          { label: 'Class / Type', value: application.class_type },
+          { label: 'Alcohol', value: application.alcohol_content },
+          { label: 'Net Contents', value: application.net_contents },
+        ]}
+      />
+    </div>
+  );
+}
+
+function LabelReceipt({
+  imageName,
+  previewUrl,
+}: {
+  imageName: string | null;
+  previewUrl: string | null;
+}) {
+  if (!imageName) {
+    return null;
+  }
+
+  const isPdf = previewUrl === null;
+
+  return (
+    <div className="flex items-start gap-4">
+      {isPdf ? (
+        <div className="flex h-16 w-12 shrink-0 items-center justify-center rounded-[0.8rem] border border-border bg-surface-muted text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+          PDF
+        </div>
+      ) : (
+        <Image
+          src={previewUrl ?? ''}
+          alt="Uploaded label preview"
+          width={48}
+          height={64}
+          unoptimized
+          className="h-16 w-12 shrink-0 rounded-[0.8rem] border border-border object-cover"
+        />
+      )}
+
+      <div className="space-y-1">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-pass">
+          Ready to review
+        </p>
+        <p className="text-sm leading-6 text-fg">{imageName}</p>
+      </div>
     </div>
   );
 }
@@ -182,25 +219,26 @@ function InlineError({ message }: { message: string }) {
 function getInstruction(hasForm: boolean, hasImage: boolean) {
   if (!hasForm) {
     return {
-      detail: 'Upload the application record file with the submitted label details.',
-      title: 'Please add the application form.',
+      detail: 'Upload the structured application data for this label.',
+      title: 'Add the application form.',
     };
   }
 
   if (!hasImage) {
     return {
-      detail: 'The application form is ready. Upload the label image for comparison.',
-      title: 'Please add the label image.',
+      detail: 'Upload the label image or PDF that should match the application form.',
+      title: 'Add the label image.',
     };
   }
 
   return {
     detail: 'Both files are ready. Review the application form and label image together.',
-    title: 'Everything is ready.',
+    title: 'Ready to review.',
   };
 }
 
 function ReviewUploadStage({
+  application,
   applicationError,
   errorMessage,
   formName,
@@ -208,10 +246,12 @@ function ReviewUploadStage({
   hasImage,
   imageError,
   imageName,
+  labelPreviewUrl,
   onFormUpload,
   onImageUpload,
   onStart,
 }: {
+  application: CreateApplicationRequest | null;
   applicationError: string | null;
   errorMessage: string | null;
   formName: string | null;
@@ -219,6 +259,7 @@ function ReviewUploadStage({
   hasImage: boolean;
   imageError: string | null;
   imageName: string | null;
+  labelPreviewUrl: string | null;
   onFormUpload: (files: FileList) => void;
   onImageUpload: (files: FileList) => void;
   onStart: () => void;
@@ -240,13 +281,13 @@ function ReviewUploadStage({
       {errorMessage ? <InlineError message={errorMessage} /> : null}
 
       <div className="app-grid-frame grid grid-cols-1 gap-px md:grid-cols-2">
-        <StepCard
+        <IntakeStepCard
           label="Application Form"
           stepNumber={1}
           done={hasForm}
           current={!hasForm}
         />
-        <StepCard
+        <IntakeStepCard
           label="Label Image"
           stepNumber={2}
           done={hasImage}
@@ -255,28 +296,44 @@ function ReviewUploadStage({
       </div>
 
       <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-2">
-        <UploadCard
+        <IntakeUploadCard
           title="Application Form"
-          description="Upload a JSON or CSV application record with the submitted brand name, class/type, alcohol content, net contents, and bottler details."
+          description="Upload the structured application data for this label."
           actionLabel="Upload Form"
           helperText={formName ?? 'Drag and drop a .json or .csv file, or browse'}
+          acceptedFormats={['.json', '.csv']}
+          completeDetails={
+            hasForm ? <ApplicationReceipt application={application} filename={formName} /> : null
+          }
+          examplePreview={<FormExamplePreview />}
+          helpItems={FORM_HELP_ITEMS}
+          helpTitle="What should this file look like?"
           complete={hasForm}
           active={!hasForm}
           errorMessage={applicationError}
           onClick={() => formInputRef.current?.click()}
           onDropFiles={onFormUpload}
+          onReplace={() => formInputRef.current?.click()}
           icon={<FileText size={20} />}
         />
-        <UploadCard
+        <IntakeUploadCard
           title="Label Image"
-          description="Upload the label image or PDF to compare against the application form."
+          description="Upload the label artwork that should match the application form."
           actionLabel="Upload Image"
           helperText={imageName ?? 'Drag and drop a .png, .jpg, or .pdf file, or browse'}
+          acceptedFormats={['.png', '.jpg', '.pdf']}
+          completeDetails={
+            hasImage ? <LabelReceipt imageName={imageName} previewUrl={labelPreviewUrl} /> : null
+          }
+          examplePreview={<LabelExamplePreview />}
+          helpItems={IMAGE_HELP_ITEMS}
+          helpTitle="What should this file show?"
           complete={hasImage}
           active={hasForm && !hasImage}
           errorMessage={imageError}
           onClick={() => imageInputRef.current?.click()}
           onDropFiles={onImageUpload}
+          onReplace={() => imageInputRef.current?.click()}
           icon={<ImagePlus size={20} />}
         />
       </div>
@@ -444,6 +501,7 @@ export function ReviewPage() {
   if (stage === 'upload') {
     return (
       <ReviewUploadStage
+        application={application}
         applicationError={applicationError}
         errorMessage={submitError}
         formName={formName}
@@ -451,6 +509,7 @@ export function ReviewPage() {
         hasImage={hasImage}
         imageError={imageError}
         imageName={imageName}
+        labelPreviewUrl={labelPreviewUrl}
         onFormUpload={handleFormUpload}
         onImageUpload={handleImageUpload}
         onStart={() => void startReview()}

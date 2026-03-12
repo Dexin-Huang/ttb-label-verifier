@@ -1,10 +1,11 @@
-import { PlaceholderPage } from '@/components/app/placeholder-page';
+import { BatchDetailPage } from '@/components/app/batch-detail-page';
 
-export default function BatchDetailPage() {
-  return (
-    <PlaceholderPage
-      title="Batch Detail"
-      description="Batch drill-down remains a placeholder for now so the team can stay focused on the primary visual flows."
-    />
-  );
+export default async function BatchDetailRoute({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return <BatchDetailPage batchId={id} />;
 }
