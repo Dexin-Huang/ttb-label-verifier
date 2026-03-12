@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { BrushLogo } from './BrushLogo';
 
 const NAV_ITEMS = [
   {
@@ -30,9 +31,10 @@ export function Header() {
       <div className="flex w-full items-center justify-between px-4 py-3 md:px-6 md:py-4">
         <Link
           href="/"
-          className="flex flex-col transition-opacity hover:opacity-80"
+          className="flex items-center gap-2 transition-opacity hover:opacity-80"
         >
-          <span className="display-serif text-[1.06rem] leading-[1.08] tracking-[0.03em] md:text-[1.16rem]">
+          <BrushLogo size={32} />
+          <span className="display-serif text-lg italic leading-none tracking-tight md:text-xl">
             TTB Label Verifier
           </span>
         </Link>

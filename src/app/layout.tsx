@@ -17,7 +17,7 @@ const playfairDisplay = Playfair_Display({
 
 export const metadata: Metadata = {
   title: 'TTB Label Verifier',
-  description: 'Label verification interface for ongoing design iteration.',
+  description: 'AI-assisted alcohol label triage prototype for the TTB take-home.',
 };
 
 export default function RootLayout({
