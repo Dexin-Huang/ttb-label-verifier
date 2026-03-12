@@ -1,5 +1,5 @@
 /**
- * Abstract Brush-Stroke Logo — ensō circle with bottle silhouette.
+ * Abstract brush-stroke logo with a circle and bottle silhouette.
  */
 export function BrushLogo({ size = 32 }: { size?: number }) {
   return (
@@ -10,7 +10,7 @@ export function BrushLogo({ size = 32 }: { size?: number }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Ensō / Brush Circle */}
+      {/* Brush circle */}
       <path
         d="M85 50C85 69.33 69.33 85 50 85C30.67 85 15 69.33 15 50C15 30.67 30.67 15 50 15C58 15 65 18 71 23"
         stroke="currentColor"
