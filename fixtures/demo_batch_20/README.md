@@ -27,9 +27,3 @@ Current app flow:
 - upload all label files from `files/`
 
 Longer-term packaging can collapse this into one `batch.zip`, but the current app does not require that.
-
-## Provenance
-
-The clean base cases come from the reviewed subset metadata kept in `../reviewed_subset/`.
-
-The flagged items are image-side mutations derived from the same reviewed source examples.

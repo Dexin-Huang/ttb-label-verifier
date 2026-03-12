@@ -2,11 +2,6 @@
 
 AI-assisted alcohol label triage prototype for the TTB take-home.
 
-Supporting notes:
-
-- `EVALUATION.md` - internal rubric, current grade, and requirement gap analysis
-- `POLISH_NOTES.md` - active product/design polish priorities
-
 ## What It Is
 
 The product is intentionally narrow:
@@ -31,6 +26,7 @@ This repo uses a stateless review core:
 
 - client sends `application JSON + label file`
 - server runs Gemini extraction
+- flagged fields can get one conservative Gemini re-check when the first pass looks ambiguous
 - deterministic rules compare extracted values to the application
 - server returns review JSON directly
 
@@ -79,37 +75,12 @@ npm run dev
 
 ## Sample Data
 
-This migrated repo keeps the small evaluator-ready fixture pack under `fixtures/`:
+The repo keeps two demo-ready fixture packs under `fixtures/`:
 
 - `fixtures/demo_batch_20`
   Main 20-item demo batch with expected triage outcomes and bundled label files.
-- `fixtures/sample_batch`
-  Tiny manifest example that points at the synthetic label set.
-- `fixtures/reviewed_subset`
-  Small reviewed metadata subset kept for provenance/context.
-- `fixtures/labels/synthetic`
-  Small controlled synthetic label set for simple manual runs.
-- `fixtures/extraction-responses`
-  Mock extraction payloads used by tests.
-
-The larger historical corpora were intentionally left behind in the old repos so this new root stays small and rebuild-friendly.
-
-## Gemini Image CLI
-
-For quick reference-driven image generation and editing:
-
-```bash
-npm run gemini:image -- \
-  --prompt "Create a fictional distilled spirits label inspired by the attached references. Change all brands, logos, artwork, and addresses." \
-  --image ..\reference_material\ttb_official_examples\distilled_spirits_example_1.jpg \
-  --image ..\reference_material\ttb_official_examples\distilled_spirits_example_2.jpg \
-  --out-dir tmp\gemini-run \
-  --aspect-ratio 3:4
-```
-
-Defaults:
-
-- model: `gemini-3.1-flash-image-preview`
+- `fixtures/single_review_demo`
+  Clean single-review pair for the golden-path demo.
 
 ## Useful Scripts
 
@@ -117,8 +88,6 @@ Defaults:
 npm run dev
 npm run build
 npm run lint
-npm run test:run
-npm run gemini:image
 ```
 
 ## Project Structure
@@ -134,7 +103,6 @@ src/
     api/review/route.ts            stateless review endpoint
   components/
     app/                           dashboard, review, batch, and detail views
-    layout/                        session provider placeholder
   lib/
     gemini.ts                      Gemini extraction
     run-stateless-review.ts        core review execution
@@ -147,11 +115,7 @@ src/
     rules/                         deterministic rule engine
 fixtures/
   demo_batch_20/                  main evaluator-ready batch demo
-  sample_batch/                   small manifest example
-  labels/synthetic/               small synthetic labels pack
-tests/
-  rules/                          deterministic engine tests
-  batch-upload.test.ts            batch manifest and file-matching tests
+  single_review_demo/             golden single-review pair
 ```
 
 ## Verification
@@ -159,13 +123,13 @@ tests/
 Current checks run clean in this migrated root:
 
 - `npm run lint`
-- `npm run test:run`
 - `npm run build`
 
 ## Design Notes
 
 - Gemini is the extraction layer only.
-- Deterministic rules produce the triage result.
+- Deterministic rules produce the final triage result.
+- A second Gemini pass only re-checks flagged fields when the first extraction looks ambiguous.
 - Session history is intentional for the prototype; there is no permanent archive.
 - Batch review is repeated single-review execution with bounded parallelism.
 - The current batch flow runs with concurrency `6` by default.

@@ -1,5 +1,0 @@
-external_reference,label_filename,beverage_type,brand_name,class_type,alcohol_content,net_contents,bottler_name_address,country_of_origin,requires_government_warning
-SAMPLE-001,perfect_match_bourbon.png,distilled_spirits,OLD TOM DISTILLERY,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Old Tom Distillery, Bardstown, KY",,true
-SAMPLE-002,brand_case_only_match.png,distilled_spirits,Stone's Throw,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Stones Throw Distilling, Louisville, KY",,true
-SAMPLE-003,abv_mismatch.png,distilled_spirits,BLACK TIMBER,Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Black Timber Distilling, Frankfort, KY",,true
-SAMPLE-004,warning_heading_title_case.png,distilled_spirits,OLD TOM DISTILLERY,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Old Tom Distillery, Bardstown, KY",,true
