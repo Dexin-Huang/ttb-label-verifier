@@ -60,11 +60,16 @@ cd C:\Users\dexin\Projects\treasury
 npm install
 ```
 
-Create `.env.local` from `.env.example` and set:
+Create `.env.local` and set:
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+Optional:
+
+```bash
+NEXT_PUBLIC_BATCH_CONCURRENCY=6
 ```
 
 Then run:
