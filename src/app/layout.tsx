@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Playfair_Display } from 'next/font/google';
 import { Header } from '@/components/Header';
 import './globals.css';
@@ -18,6 +18,11 @@ const playfairDisplay = Playfair_Display({
 export const metadata: Metadata = {
   title: 'TTB Label Verifier',
   description: 'AI-assisted alcohol label triage prototype for the TTB take-home.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

@@ -19,7 +19,7 @@
 }
 
 :root {
-  --page-width: 72rem;
+  --page-width: 80rem;
   --page-gutter: clamp(1.5rem, 4vw, 3rem);
   --page-top: clamp(2rem, 4vw, 3rem);
   --section-gap: clamp(3rem, 6vw, 4.5rem);
